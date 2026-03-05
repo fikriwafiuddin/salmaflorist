@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Exports\CashTransactionExport;
+use App\Http\Requests\CashTransactions\CashTransactionRequest;
+use App\Models\CashTransaction;
+use App\Services\CashTransactionService;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpParser\Node\Stmt\TryCatch;
+
+class CashTransactionController extends Controller
+{
+    private $cashTransactionService;
+
+    public function __construct(CashTransactionService $cashTransactionService) {
+        $this->cashTransactionService = $cashTransactionService;
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $cashTransactions = $this->cashTransactionService->getAll($request);
+
+        return Inertia::render('admin/cash_transactions/index/page', [
+            'cashTransactions' => $cashTransactions,
+            'filters' => $request->only(['year', 'month', 'type'])
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return Inertia::render('admin/cash_transactions/create/page');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(CashTransactionRequest $request)
+    {
+        $this->cashTransactionService->create($request->validated());
+
+        return to_route('cash-transactions.index')->with('success', 'Transaksi kas berhasil ditambahkan');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(int $id)
+    {
+        $cashTransaction = $this->cashTransactionService->getById($id);
+
+        return Inertia::render('admin/cash_transactions/show/page', [
+            'cashTransaction' => $cashTransaction
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(int $id)
+    {
+        $cashTransaction = $this->cashTransactionService->getById($id);
+
+        return Inertia::render('admin/cash_transactions/update/page', [
+            'cashTransaction' => $cashTransaction
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(CashTransactionRequest $request, int $id)
+    {
+        try {
+            $this->cashTransactionService->update($request->validated(), $id);
+
+            return to_route('cash-transactions.index')->with('success', 'Transaksi kas berhasil diupdate');
+        } catch (\Exception $e) {
+            return to_route('cash-transactions.index')->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(int $id)
+    {
+        try {
+            $this->cashTransactionService->delete($id);
+
+            return to_route('cash-transactions.index')->with('success', 'Transaksi kas berhasil dihapus');
+        } catch (\Exception $e) {
+            return to_route('cash-transactions.index')->with('error', $e->getMessage());
+        }
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month = $request->month ?? now()->month;
+        $year  = $request->year ?? now()->year;
+        
+        $fileName = "transaksi-kas-{$year}-{$month}.xlsx";
+
+        return Excel::download(
+            new CashTransactionExport($year, $month),
+            $fileName
+        );
+    }
+}
