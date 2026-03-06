@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -34,6 +35,16 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+
+        RedirectIfAuthenticated::redirectUsing(function ($request) {
+            $role = $request->user()->role;
+
+            if ($role === 'admin') {
+                return '/admin/dashboard';
+            }
+
+            return '/';
+        });
     }
 
     /**
