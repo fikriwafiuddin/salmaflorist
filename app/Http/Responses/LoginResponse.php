@@ -16,7 +16,7 @@ class LoginResponse implements LoginResponseContract
         $role = $request->user()->role;
 
         if ($role === 'admin') {
-            return redirect()->intended('/dashboard');
+            return redirect('/admin/dashboard');
         }
 
        return Inertia::location('/');
