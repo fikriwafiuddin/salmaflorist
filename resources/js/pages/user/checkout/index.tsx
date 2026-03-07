@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import useCartStore from '@/hooks/useCartStore';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -77,10 +78,7 @@ const shippingOptions = [
     },
 ];
 
-const orderItems = [
-    { name: 'Buket Mawar Merah', qty: 1, price: 185000 },
-    { name: 'Hand Bouquet Sunflower', qty: 2, price: 230000 },
-];
+// Removed mock orderItems
 
 function formatRupiah(amount: number) {
     return new Intl.NumberFormat('id-ID', {
@@ -177,7 +175,8 @@ export default function CheckoutPage() {
         setShippingCostLoaded(false);
     };
 
-    const subtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const cartItems = useCartStore((state) => state.items);
+    const subtotal = useCartStore((state) => state.getTotalAmount());
     const shippingCost =
         shippingOptions.find((o) => o.id === selectedShipping)?.cost ?? 0;
     const total = subtotal + shippingCost;
@@ -471,17 +470,21 @@ export default function CheckoutPage() {
                                 </h2>
 
                                 <div className="space-y-3 text-sm">
-                                    {orderItems.map((item, i) => (
+                                    {cartItems.map((item, i) => (
                                         <div
                                             key={i}
                                             className="flex justify-between text-muted-foreground"
                                         >
                                             <span className="flex-1 truncate pr-2">
-                                                {item.name} × {item.qty}
+                                                {item.is_custom
+                                                    ? item.custom_name
+                                                    : item.product?.name}{' '}
+                                                × {item.quantity}
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
-                                                    item.price * item.qty,
+                                                    item.unit_price *
+                                                        item.quantity,
                                                 )}
                                             </span>
                                         </div>

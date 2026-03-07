@@ -1,42 +1,18 @@
+import FormCustomItem from '@/components/shared/FormCustomItem';
 import { Button } from '@/components/ui/button';
+import useCartStore from '@/hooks/useCartStore';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowLeft,
     ArrowRight,
+    Edit2,
+    Info,
     Minus,
     Plus,
+    PlusCircle,
     ShoppingCart,
     Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
-
-// Mock cart items – will be replaced with real state/backend data
-const initialCartItems = [
-    {
-        id: 1,
-        name: 'Buket Mawar Merah',
-        price: 185000,
-        quantity: 1,
-        image: '/images/product-placeholder.jpg',
-        category: 'Buket',
-    },
-    {
-        id: 2,
-        name: 'Hand Bouquet Sunflower',
-        price: 230000,
-        quantity: 2,
-        image: '/images/product-placeholder.jpg',
-        category: 'Hand Bouquet',
-    },
-    {
-        id: 3,
-        name: 'Flower Box Premium',
-        price: 320000,
-        quantity: 1,
-        image: '/images/product-placeholder.jpg',
-        category: 'Flower Box',
-    },
-];
 
 function formatRupiah(amount: number) {
     return new Intl.NumberFormat('id-ID', {
@@ -47,26 +23,10 @@ function formatRupiah(amount: number) {
 }
 
 export default function CartPage() {
-    const [cartItems, setCartItems] = useState(initialCartItems);
-
-    const updateQty = (id: number, delta: number) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === id
-                    ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-                    : item,
-            ),
-        );
-    };
-
-    const removeItem = (id: number) => {
-        setCartItems((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    const subtotal = cartItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0,
-    );
+    const cartItems = useCartStore((state) => state.items);
+    const updateQuantity = useCartStore((state) => state.updateQuantity);
+    const deleteItem = useCartStore((state) => state.deleteItem);
+    const totalAmount = useCartStore((state) => state.getTotalAmount());
 
     return (
         <>
@@ -97,18 +57,30 @@ export default function CartPage() {
                 <main className="mx-auto max-w-6xl px-4 py-8">
                     {/* Breadcrumb */}
                     <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Link href="/" className="hover:text-primary">
+                        <a href="/" className="hover:text-primary">
                             Beranda
-                        </Link>
+                        </a>
                         <span>/</span>
                         <span className="font-medium text-foreground">
                             Keranjang
                         </span>
                     </nav>
 
-                    <h1 className="mb-8 font-playfair-display text-3xl font-bold text-foreground">
-                        Keranjang Belanja
-                    </h1>
+                    <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                        <h1 className="font-playfair-display text-3xl font-bold text-foreground">
+                            Keranjang Belanja
+                        </h1>
+
+                        <FormCustomItem type="ADD">
+                            <Button
+                                variant="outline"
+                                className="gap-2 border-primary text-primary hover:bg-primary/5"
+                            >
+                                <PlusCircle className="h-4 w-4" />
+                                Tambah Item Custom
+                            </Button>
+                        </FormCustomItem>
+                    </div>
 
                     {cartItems.length === 0 ? (
                         /* ── Empty state ─────────────────────────────── */
@@ -120,38 +92,49 @@ export default function CartPage() {
                                 Keranjang kamu masih kosong
                             </h2>
                             <p className="mb-6 text-muted-foreground">
-                                Yuk, temukan rangkaian bunga cantik pilihan
-                                kamu!
+                                Yuk, temukan rangkaian bunga cantik pilihan kamu
+                                atau buat pesanan kustom!
                             </p>
-                            <Button asChild>
-                                <Link href="/catalog">
-                                    Lihat Katalog{' '}
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </Link>
-                            </Button>
+                            <div className="flex flex-wrap justify-center gap-4">
+                                <Button asChild>
+                                    <Link href="/catalog">
+                                        Lihat Katalog{' '}
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
+                                </Button>
+                                <FormCustomItem type="ADD">
+                                    <Button variant="secondary">
+                                        Buat Pesanan Kustom
+                                    </Button>
+                                </FormCustomItem>
+                            </div>
                         </div>
                     ) : (
                         <div className="grid gap-8 lg:grid-cols-3">
                             {/* ── Cart Items ───────────────────────────── */}
                             <div className="space-y-4 lg:col-span-2">
-                                {cartItems.map((item) => (
+                                {cartItems.map((item, index) => (
                                     <div
-                                        key={item.id}
+                                        key={index}
                                         className="flex gap-4 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                                     >
-                                        {/* Product image */}
-                                        <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-pink-50">
-                                            <img
-                                                src={item.image}
-                                                alt={item.name}
-                                                className="h-full w-full object-cover"
-                                                onError={(e) => {
-                                                    (
-                                                        e.target as HTMLImageElement
-                                                    ).src =
-                                                        `https://placehold.co/96x96/fce7f3/be185d?text=🌸`;
-                                                }}
-                                            />
+                                        {/* Product image / Custom Icon */}
+                                        <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-pink-50">
+                                            {item.is_custom ? (
+                                                <PlusCircle className="h-8 w-8 text-primary/40" />
+                                            ) : (
+                                                <img
+                                                    src={`/storage/${item.product?.image}`}
+                                                    alt={item.product?.name}
+                                                    className="h-full w-full object-cover"
+                                                    onError={(e) => {
+                                                        (
+                                                            e.target as HTMLImageElement
+                                                        ).src =
+                                                            `https://placehold.co/96x96/fce7f3/be185d?text=🌸`;
+                                                    }}
+                                                />
+                                            )}
                                         </div>
 
                                         {/* Product info */}
@@ -159,35 +142,82 @@ export default function CartPage() {
                                             <div className="flex items-start justify-between">
                                                 <div>
                                                     <span className="mb-0.5 inline-block rounded-full bg-pink-50 px-2 py-0.5 text-xs text-primary">
-                                                        {item.category}
+                                                        {item.is_custom
+                                                            ? 'Custom Order'
+                                                            : item.product
+                                                                  ?.category
+                                                                  ?.name ||
+                                                              'Produk'}
                                                     </span>
                                                     <h3 className="font-semibold text-foreground">
-                                                        {item.name}
+                                                        {item.is_custom
+                                                            ? item.custom_name
+                                                            : item.product
+                                                                  ?.name}
                                                     </h3>
+                                                    {item.is_custom &&
+                                                        item.custom_description && (
+                                                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground italic">
+                                                                <Info className="h-3 w-3" />{' '}
+                                                                {
+                                                                    item.custom_description
+                                                                }
+                                                            </p>
+                                                        )}
                                                 </div>
-                                                <button
-                                                    onClick={() =>
-                                                        removeItem(item.id)
-                                                    }
-                                                    className="ml-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
-                                                    aria-label="Hapus produk"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex gap-1">
+                                                    {item.is_custom && (
+                                                        <FormCustomItem
+                                                            type="UPDATE"
+                                                            index={index}
+                                                            customItem={{
+                                                                custom_name:
+                                                                    item.custom_name ||
+                                                                    '',
+                                                                custom_description:
+                                                                    item.custom_description ||
+                                                                    '',
+                                                                unit_price:
+                                                                    item.unit_price,
+                                                                quantity:
+                                                                    item.quantity,
+                                                            }}
+                                                        >
+                                                            <button
+                                                                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-pink-50 hover:text-primary"
+                                                                aria-label="Edit item kustom"
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </button>
+                                                        </FormCustomItem>
+                                                    )}
+                                                    <button
+                                                        onClick={() =>
+                                                            deleteItem(index)
+                                                        }
+                                                        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
+                                                        aria-label="Hapus produk"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center justify-between">
                                                 <span className="text-lg font-bold text-primary">
-                                                    {formatRupiah(item.price)}
+                                                    {formatRupiah(
+                                                        item.unit_price,
+                                                    )}
                                                 </span>
 
                                                 {/* Qty controls */}
                                                 <div className="flex items-center gap-2 rounded-xl border border-pink-200 bg-pink-50/50 px-1 py-1">
                                                     <button
                                                         onClick={() =>
-                                                            updateQty(
-                                                                item.id,
-                                                                -1,
+                                                            updateQuantity(
+                                                                item.quantity -
+                                                                    1,
+                                                                index,
                                                             )
                                                         }
                                                         className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
@@ -199,9 +229,10 @@ export default function CartPage() {
                                                     </span>
                                                     <button
                                                         onClick={() =>
-                                                            updateQty(
-                                                                item.id,
-                                                                1,
+                                                            updateQuantity(
+                                                                item.quantity +
+                                                                    1,
+                                                                index,
                                                             )
                                                         }
                                                         className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
@@ -230,17 +261,21 @@ export default function CartPage() {
                                 </h2>
 
                                 <div className="space-y-3 text-sm">
-                                    {cartItems.map((item) => (
+                                    {cartItems.map((item, index) => (
                                         <div
-                                            key={item.id}
+                                            key={index}
                                             className="flex justify-between text-muted-foreground"
                                         >
                                             <span className="flex-1 truncate pr-2">
-                                                {item.name} × {item.quantity}
+                                                {item.is_custom
+                                                    ? item.custom_name
+                                                    : item.product?.name}{' '}
+                                                × {item.quantity}
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
-                                                    item.price * item.quantity,
+                                                    item.unit_price *
+                                                        item.quantity,
                                                 )}
                                             </span>
                                         </div>
@@ -252,7 +287,7 @@ export default function CartPage() {
                                 <div className="flex justify-between font-semibold">
                                     <span>Subtotal</span>
                                     <span className="text-lg text-primary">
-                                        {formatRupiah(subtotal)}
+                                        {formatRupiah(totalAmount)}
                                     </span>
                                 </div>
                                 <p className="mt-1 text-xs text-muted-foreground">
