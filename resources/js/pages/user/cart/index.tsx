@@ -1,18 +1,20 @@
 import FormCustomItem from '@/components/shared/FormCustomItem';
 import { Button } from '@/components/ui/button';
-import useCartStore from '@/hooks/useCartStore';
-import { Head, Link } from '@inertiajs/react';
+import { destroy } from '@/routes/user/cart';
+import { Cart } from '@/types';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     ArrowRight,
     Edit2,
-    Info,
+    InfoIcon,
     Minus,
     Plus,
     PlusCircle,
     ShoppingCart,
     Trash2,
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 function formatRupiah(amount: number) {
     return new Intl.NumberFormat('id-ID', {
@@ -22,11 +24,56 @@ function formatRupiah(amount: number) {
     }).format(amount);
 }
 
-export default function CartPage() {
-    const cartItems = useCartStore((state) => state.items);
-    const updateQuantity = useCartStore((state) => state.updateQuantity);
-    const deleteItem = useCartStore((state) => state.deleteItem);
-    const totalAmount = useCartStore((state) => state.getTotalAmount());
+type CartPageProps = {
+    cart: Cart;
+};
+
+export default function CartPage({ cart }: CartPageProps) {
+    const [localQuantities, setLocalQuantities] = useState<
+        Record<number, number>
+    >(Object.fromEntries(cart.items.map((item) => [item.id, item.quantity])));
+
+    const timeoutRef = useRef<Record<number, NodeJS.Timeout>>({});
+
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutRef.current).forEach((timeout) =>
+                clearTimeout(timeout),
+            );
+        };
+    }, []);
+
+    const updateQuantity = (newQuantity: number, itemId: number) => {
+        if (newQuantity < 1) return;
+
+        setLocalQuantities((prev) => ({ ...prev, [itemId]: newQuantity }));
+
+        if (timeoutRef.current[itemId]) {
+            clearTimeout(timeoutRef.current[itemId]);
+        }
+
+        timeoutRef.current[itemId] = setTimeout(() => {
+            router.patch(
+                `/cart/${itemId}`,
+                { quantity: newQuantity },
+                {
+                    preserveScroll: true,
+                    onFinish: () => {
+                        delete timeoutRef.current[itemId];
+                    },
+                },
+            );
+        }, 500);
+    };
+
+    const deleteItem = (id: number) => {
+        router.delete(destroy(id));
+    };
+
+    const totalAmount = cart.items.reduce((total, item) => {
+        const price = item.product?.price || item.unit_price || 0;
+        return total + price * item.quantity;
+    }, 0);
 
     return (
         <>
@@ -49,7 +96,7 @@ export default function CartPage() {
                         </Link>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <ShoppingCart className="h-4 w-4" />
-                            <span>{cartItems.length} produk</span>
+                            <span>{cart.items.length} produk</span>
                         </div>
                     </div>
                 </header>
@@ -82,7 +129,7 @@ export default function CartPage() {
                         </FormCustomItem>
                     </div>
 
-                    {cartItems.length === 0 ? (
+                    {cart.items.length === 0 ? (
                         /* ── Empty state ─────────────────────────────── */
                         <div className="flex flex-col items-center justify-center py-24 text-center">
                             <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-pink-50">
@@ -113,9 +160,9 @@ export default function CartPage() {
                         <div className="grid gap-8 lg:grid-cols-3">
                             {/* ── Cart Items ───────────────────────────── */}
                             <div className="space-y-4 lg:col-span-2">
-                                {cartItems.map((item, index) => (
+                                {cart.items.map((item) => (
                                     <div
-                                        key={index}
+                                        key={item.id}
                                         className="flex gap-4 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                                     >
                                         {/* Product image / Custom Icon */}
@@ -155,10 +202,10 @@ export default function CartPage() {
                                                             : item.product
                                                                   ?.name}
                                                     </h3>
-                                                    {item.is_custom &&
+                                                    {item.is_custom == 1 &&
                                                         item.custom_description && (
                                                             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground italic">
-                                                                <Info className="h-3 w-3" />{' '}
+                                                                <InfoIcon className="h-3 w-3" />{' '}
                                                                 {
                                                                     item.custom_description
                                                                 }
@@ -166,22 +213,11 @@ export default function CartPage() {
                                                         )}
                                                 </div>
                                                 <div className="flex gap-1">
-                                                    {item.is_custom && (
+                                                    {item.is_custom == 1 && (
                                                         <FormCustomItem
                                                             type="UPDATE"
-                                                            index={index}
-                                                            customItem={{
-                                                                custom_name:
-                                                                    item.custom_name ||
-                                                                    '',
-                                                                custom_description:
-                                                                    item.custom_description ||
-                                                                    '',
-                                                                unit_price:
-                                                                    item.unit_price,
-                                                                quantity:
-                                                                    item.quantity,
-                                                            }}
+                                                            id={item.id}
+                                                            customItem={item}
                                                         >
                                                             <button
                                                                 className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-pink-50 hover:text-primary"
@@ -193,7 +229,7 @@ export default function CartPage() {
                                                     )}
                                                     <button
                                                         onClick={() =>
-                                                            deleteItem(index)
+                                                            deleteItem(item.id)
                                                         }
                                                         className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
                                                         aria-label="Hapus produk"
@@ -206,7 +242,8 @@ export default function CartPage() {
                                             <div className="flex items-center justify-between">
                                                 <span className="text-lg font-bold text-primary">
                                                     {formatRupiah(
-                                                        item.unit_price,
+                                                        item?.product?.price ||
+                                                            item.unit_price,
                                                     )}
                                                 </span>
 
@@ -215,9 +252,12 @@ export default function CartPage() {
                                                     <button
                                                         onClick={() =>
                                                             updateQuantity(
-                                                                item.quantity -
+                                                                (localQuantities[
+                                                                    item.id
+                                                                ] ||
+                                                                    item.quantity) -
                                                                     1,
-                                                                index,
+                                                                item.id,
                                                             )
                                                         }
                                                         className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
@@ -225,14 +265,19 @@ export default function CartPage() {
                                                         <Minus className="h-3.5 w-3.5" />
                                                     </button>
                                                     <span className="w-6 text-center text-sm font-semibold">
-                                                        {item.quantity}
+                                                        {localQuantities[
+                                                            item.id
+                                                        ] || item.quantity}
                                                     </span>
                                                     <button
                                                         onClick={() =>
                                                             updateQuantity(
-                                                                item.quantity +
+                                                                (localQuantities[
+                                                                    item.id
+                                                                ] ||
+                                                                    item.quantity) +
                                                                     1,
-                                                                index,
+                                                                item.id,
                                                             )
                                                         }
                                                         className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
@@ -261,9 +306,9 @@ export default function CartPage() {
                                 </h2>
 
                                 <div className="space-y-3 text-sm">
-                                    {cartItems.map((item, index) => (
+                                    {cart.items.map((item) => (
                                         <div
-                                            key={index}
+                                            key={item.id}
                                             className="flex justify-between text-muted-foreground"
                                         >
                                             <span className="flex-1 truncate pr-2">
@@ -274,8 +319,9 @@ export default function CartPage() {
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
-                                                    item.unit_price *
-                                                        item.quantity,
+                                                    (item.product?.price ||
+                                                        item.unit_price ||
+                                                        0) * item.quantity,
                                                 )}
                                             </span>
                                         </div>

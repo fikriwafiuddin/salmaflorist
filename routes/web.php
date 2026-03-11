@@ -10,6 +10,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TestimonialsController;
 use App\Http\Controllers\User\AboutController;
+use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CatalogController;
 use App\Http\Controllers\User\ContactController;
 use App\Http\Controllers\User\HomeController;
@@ -63,7 +64,10 @@ Route::name('user.')->group(function() {
 
     // User e-commerce routes (UI only — backend wiring menyusul)
     Route::middleware(['auth', 'role:user'])->group(function () {
-        Route::get('/cart', fn() => Inertia::render('user/cart/index'))->name('cart.index');
+        Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+        Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
+        Route::patch('/cart/{id}', [CartController::class, 'update'])->name('cart.update');
+        Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.destroy');
         Route::get('/checkout', fn() => Inertia::render('user/checkout/index'))->name('checkout.index');
         Route::get('/payment', fn() => Inertia::render('user/payment/index'))->name('payment.index');
         Route::get('/payment/success', fn() => Inertia::render('user/payment/success'))->name('payment.success');

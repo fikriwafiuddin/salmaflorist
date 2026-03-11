@@ -118,3 +118,21 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+
+export interface Cart {
+    id: number;
+    user_id: number;
+    items: CartItem[];
+}
+
+export interface CartItem {
+    id: number;
+    cart_id: number;
+    product_id: number | null;
+    is_custom: 0 | 1;
+    quantity: number;
+    unit_price: number;
+    product: Product | null;
+    custom_name?: string | null;
+    custom_description?: string | null;
+}

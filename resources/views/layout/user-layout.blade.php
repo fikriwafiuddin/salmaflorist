@@ -18,6 +18,7 @@
     @yield('content')
 
     <x-cart-button/>
+    <x-toast/>
 
     <x-footer/>
 
