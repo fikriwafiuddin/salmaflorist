@@ -3,6 +3,7 @@
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CatalogController;
 use App\Http\Controllers\User\ContactController;
 use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\User\OrderController as UserOrderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -62,16 +64,19 @@ Route::name('user.')->group(function() {
     Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
     Route::get('/testimonials', [HomeController::class, 'testimonials'])->name('testimonials.index');
 
-    // User e-commerce routes (UI only — backend wiring menyusul)
     Route::middleware(['auth', 'role:user'])->group(function () {
         Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
         Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
         Route::patch('/cart/{id}', [CartController::class, 'update'])->name('cart.update');
         Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.destroy');
-        Route::get('/checkout', fn() => Inertia::render('user/checkout/index'))->name('checkout.index');
+        Route::get('/checkout', [UserOrderController::class, 'create'])->name('checkout.index');
         Route::get('/payment', fn() => Inertia::render('user/payment/index'))->name('payment.index');
         Route::get('/payment/success', fn() => Inertia::render('user/payment/success'))->name('payment.success');
         Route::get('/transactions', fn() => Inertia::render('user/transactions/index'))->name('transactions.index');
+
+        Route::get('/destinations/city/{provinceId}', [DestinationController::class, 'getCities'])->name('destinations.city');
+        Route::get('/destinations/district/{cityId}', [DestinationController::class, 'getDistricts'])->name('destinations.district');
+        Route::post('/destinations/shipping-costs', [DestinationController::class, 'getShippingCost'])->name('destinations.shipping-costs');
     });
 });
 

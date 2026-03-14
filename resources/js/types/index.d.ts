@@ -136,3 +136,23 @@ export interface CartItem {
     custom_name?: string | null;
     custom_description?: string | null;
 }
+
+export interface Province {
+    id: number;
+    name: string;
+}
+
+export interface City {
+    id: number;
+    name: string;
+}
+
+export interface District {
+    id: number;
+    name: string;
+}
+
+export interface Courier {
+    code: string;
+    name: string;
+}

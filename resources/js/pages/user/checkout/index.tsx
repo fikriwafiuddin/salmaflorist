@@ -1,12 +1,21 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import useCartStore from '@/hooks/useCartStore';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { COURIERS } from '@/constants';
+import destinations from '@/routes/user/destinations';
+import { Cart, Province } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import axios from 'axios';
 import {
     ArrowLeft,
     ArrowRight,
-    ChevronDown,
     MapPin,
     Package,
     ShoppingBag,
@@ -14,69 +23,6 @@ import {
     User,
 } from 'lucide-react';
 import { useState } from 'react';
-
-// ── Mock data ──────────────────────────────────────────────────────────────
-const provinces = [
-    { id: '35', name: 'Jawa Timur' },
-    { id: '32', name: 'Jawa Barat' },
-    { id: '33', name: 'Jawa Tengah' },
-    { id: '31', name: 'DKI Jakarta' },
-];
-
-const citiesByProvince: Record<string, { id: string; name: string }[]> = {
-    '35': [
-        { id: '3571', name: 'Kota Kediri' },
-        { id: '3572', name: 'Kota Blitar' },
-        { id: '3573', name: 'Kota Malang' },
-        { id: '3574', name: 'Kota Surabaya' },
-        { id: '3506', name: 'Kabupaten Kediri' },
-    ],
-    '32': [
-        { id: '3273', name: 'Kota Bandung' },
-        { id: '3271', name: 'Kota Bogor' },
-        { id: '3201', name: 'Kabupaten Bogor' },
-    ],
-    '33': [
-        { id: '3374', name: 'Kota Semarang' },
-        { id: '3401', name: 'Kota Yogyakarta' },
-    ],
-    '31': [
-        { id: '3171', name: 'Jakarta Pusat' },
-        { id: '3172', name: 'Jakarta Utara' },
-        { id: '3173', name: 'Jakarta Barat' },
-    ],
-};
-
-const shippingOptions = [
-    {
-        id: 'jne-reg',
-        courier: 'JNE',
-        service: 'REG',
-        etd: '2-3 hari',
-        cost: 15000,
-    },
-    {
-        id: 'jne-yes',
-        courier: 'JNE',
-        service: 'YES',
-        etd: '1 hari',
-        cost: 28000,
-    },
-    {
-        id: 'jnt-reg',
-        courier: 'J&T Express',
-        service: 'Reguler',
-        etd: '2-4 hari',
-        cost: 13000,
-    },
-    {
-        id: 'sicepat-reg',
-        courier: 'SiCepat',
-        service: 'BEST',
-        etd: '2-3 hari',
-        cost: 14000,
-    },
-];
 
 // Removed mock orderItems
 
@@ -111,75 +57,95 @@ function SectionCard({
     );
 }
 
-function SelectField({
-    label,
-    value,
-    onChange,
-    options,
-    placeholder,
-    disabled,
-}: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    options: { id: string; name: string }[];
-    placeholder: string;
-    disabled?: boolean;
-}) {
-    return (
-        <div className="grid gap-2">
-            <Label>{label}</Label>
-            <div className="relative">
-                <select
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    disabled={disabled}
-                    className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm shadow-xs transition-colors focus:ring-2 focus:ring-ring focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <option value="">{placeholder}</option>
-                    {options.map((o) => (
-                        <option key={o.id} value={o.id}>
-                            {o.name}
-                        </option>
-                    ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-        </div>
-    );
-}
+type CheckoutPageProps = {
+    provinces: Province[];
+    cart: Cart;
+};
 
 // ── Main page ──────────────────────────────────────────────────────────────
-export default function CheckoutPage() {
+export default function CheckoutPage({ provinces, cart }: CheckoutPageProps) {
     const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>(
         'delivery',
     );
-    const [province, setProvince] = useState('');
-    const [city, setCity] = useState('');
-    const [selectedShipping, setSelectedShipping] = useState('');
-    const [shippingCostLoaded, setShippingCostLoaded] = useState(false);
+    const [cities, setCities] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [shippingCosts, setShippingCosts] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [form, setForm] = useState({
+        province: '',
+        city: '',
+        district: '',
+        courier: '',
+        shipping: null,
+    });
 
     const handleCityChange = (v: string) => {
-        setCity(v);
-        setSelectedShipping('');
-        setShippingCostLoaded(false);
-        if (v) {
-            // Simulate API call delay
-            setTimeout(() => setShippingCostLoaded(true), 800);
-        }
+        setForm((prev) => ({
+            ...prev,
+            city: v,
+        }));
+        setIsLoading(true);
+        axios
+            .get(destinations.district(v).url)
+            .then((res) => {
+                console.log(res.data);
+                setDistricts(res.data);
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
     };
 
-    const handleProvinceChange = (v: string) => {
-        setProvince(v);
-        setCity('');
-        setShippingCostLoaded(false);
+    const handleProvinceChange = (provinceId: string) => {
+        setIsLoading(true);
+        setForm((prev) => ({
+            ...prev,
+            province: provinceId,
+        }));
+        axios
+            .get(destinations.city(provinceId).url)
+            .then((res) => {
+                setCities(res.data);
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
     };
 
-    const cartItems = useCartStore((state) => state.items);
-    const subtotal = useCartStore((state) => state.getTotalAmount());
-    const shippingCost =
-        shippingOptions.find((o) => o.id === selectedShipping)?.cost ?? 0;
-    const total = subtotal + shippingCost;
+    const handleCourierChange = (v: string) => {
+        setForm((prev) => ({
+            ...prev,
+            courier: v,
+        }));
+        setIsLoading(true);
+        axios
+            .post(destinations.shippingCosts().url, {
+                destination: form.district,
+                courier: v,
+            })
+            .then((res) => {
+                console.log(res.data);
+                setShippingCosts(res.data);
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
+    };
+
+    const subtotal = cart.items.reduce((total, item) => {
+        const price = item.product?.price || item.unit_price || 0;
+        return total + price * item.quantity;
+    }, 0);
+    const total = subtotal + (form.shipping?.cost || 0);
 
     return (
         <>
@@ -320,75 +286,159 @@ export default function CheckoutPage() {
                                 >
                                     <div className="grid gap-4">
                                         <div className="grid gap-4 sm:grid-cols-2">
-                                            <SelectField
-                                                label="Provinsi *"
-                                                value={province}
-                                                onChange={handleProvinceChange}
-                                                options={provinces}
-                                                placeholder="Pilih provinsi"
-                                            />
-                                            <SelectField
-                                                label="Kota / Kabupaten *"
-                                                value={city}
-                                                onChange={handleCityChange}
-                                                options={
-                                                    province
-                                                        ? (citiesByProvince[
-                                                              province
-                                                          ] ?? [])
-                                                        : []
-                                                }
-                                                placeholder={
-                                                    province
-                                                        ? 'Pilih kota'
-                                                        : 'Pilih provinsi dulu'
-                                                }
-                                                disabled={!province}
-                                            />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="address_detail">
-                                                Alamat Lengkap *
-                                            </Label>
-                                            <textarea
-                                                id="address_detail"
-                                                rows={3}
-                                                placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan..."
-                                                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
-                                            />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="postal">
-                                                Kode Pos
-                                            </Label>
-                                            <Input
-                                                id="postal"
-                                                placeholder="64100"
-                                                className="max-w-[160px]"
-                                            />
+                                            <div className="space-y-2">
+                                                <Label>Provinsi *</Label>
+                                                <Select
+                                                    value={form.province}
+                                                    onValueChange={
+                                                        handleProvinceChange
+                                                    }
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Pilih Provinsi" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {provinces.map(
+                                                            (province) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        province.id
+                                                                    }
+                                                                    value={
+                                                                        province.id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        province.name
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Kota *</Label>
+                                                <Select
+                                                    value={form.city}
+                                                    onValueChange={
+                                                        handleCityChange
+                                                    }
+                                                    disabled={
+                                                        !form.province ||
+                                                        isLoading
+                                                    }
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Pilih Kota" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {cities.map((city) => (
+                                                            <SelectItem
+                                                                key={city.id}
+                                                                value={city.id}
+                                                            >
+                                                                {city.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Kecamatan *</Label>
+                                                <Select
+                                                    value={form.district}
+                                                    onValueChange={(value) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            district: value,
+                                                        }))
+                                                    }
+                                                    disabled={
+                                                        !form.city || isLoading
+                                                    }
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Pilih Kecamatan" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {districts.map(
+                                                            (district) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        district.id
+                                                                    }
+                                                                    value={
+                                                                        district.id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        district.name
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Kurir *</Label>
+                                                <Select
+                                                    value={form.courier}
+                                                    onValueChange={
+                                                        handleCourierChange
+                                                    }
+                                                    disabled={
+                                                        !form.district ||
+                                                        isLoading
+                                                    }
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Pilih Kurir" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {COURIERS.map(
+                                                            (courier) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        courier.code
+                                                                    }
+                                                                    value={
+                                                                        courier.code
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        courier.name
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
 
                                         {/* ── Layanan Pengiriman ──────────────── */}
-                                        {city && (
+                                        {form.courier && (
                                             <div className="mt-2">
                                                 <Label className="mb-3 block">
                                                     Layanan Pengiriman *
                                                 </Label>
-                                                {!shippingCostLoaded ? (
+                                                {isLoading ? (
                                                     <div className="flex items-center gap-2 rounded-xl border border-pink-100 bg-pink-50 p-4 text-sm text-muted-foreground">
                                                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                                         Mengecek biaya ongkir...
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-2">
-                                                        {shippingOptions.map(
+                                                        {shippingCosts.map(
                                                             (opt) => (
                                                                 <label
                                                                     key={opt.id}
                                                                     className={`flex cursor-pointer items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
-                                                                        selectedShipping ===
+                                                                        form
+                                                                            .shipping
+                                                                            ?.id ===
                                                                         opt.id
                                                                             ? 'border-primary bg-primary/5'
                                                                             : 'border-input hover:border-primary/40'
@@ -401,13 +451,13 @@ export default function CheckoutPage() {
                                                                             value={
                                                                                 opt.id
                                                                             }
-                                                                            checked={
-                                                                                selectedShipping ===
-                                                                                opt.id
-                                                                            }
                                                                             onChange={() =>
-                                                                                setSelectedShipping(
-                                                                                    opt.id,
+                                                                                setForm(
+                                                                                    {
+                                                                                        ...form,
+                                                                                        shipping:
+                                                                                            opt,
+                                                                                    },
                                                                                 )
                                                                             }
                                                                             className="text-primary"
@@ -442,6 +492,29 @@ export default function CheckoutPage() {
                                                 )}
                                             </div>
                                         )}
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="address_detail">
+                                                Alamat Lengkap *
+                                            </Label>
+                                            <textarea
+                                                id="address_detail"
+                                                rows={3}
+                                                placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan..."
+                                                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="postal">
+                                                Kode Pos
+                                            </Label>
+                                            <Input
+                                                id="postal"
+                                                placeholder="64100"
+                                                className="max-w-[160px]"
+                                            />
+                                        </div>
                                     </div>
                                 </SectionCard>
                             )}
@@ -456,7 +529,7 @@ export default function CheckoutPage() {
                                         Timur
                                     </p>
                                     <p className="mt-0.5 text-green-600">
-                                        Jam operasional: 08.00 – 20.00 WIB
+                                        Jam operasional: 08.00 - 20.00 WIB
                                     </p>
                                 </div>
                             )}
@@ -470,7 +543,7 @@ export default function CheckoutPage() {
                                 </h2>
 
                                 <div className="space-y-3 text-sm">
-                                    {cartItems.map((item, i) => (
+                                    {cart.items.map((item, i) => (
                                         <div
                                             key={i}
                                             className="flex justify-between text-muted-foreground"
@@ -479,7 +552,7 @@ export default function CheckoutPage() {
                                                 {item.is_custom
                                                     ? item.custom_name
                                                     : item.product?.name}{' '}
-                                                × {item.quantity}
+                                                x {item.quantity}
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
@@ -511,9 +584,11 @@ export default function CheckoutPage() {
                                         >
                                             {shippingMethod === 'pickup'
                                                 ? 'Gratis'
-                                                : selectedShipping
-                                                  ? formatRupiah(shippingCost)
-                                                  : '–'}
+                                                : form.shipping
+                                                  ? formatRupiah(
+                                                        form.shipping.cost,
+                                                    )
+                                                  : '-'}
                                         </span>
                                     </div>
                                 </div>
@@ -525,7 +600,7 @@ export default function CheckoutPage() {
                                     <span className="text-lg text-primary">
                                         {shippingMethod === 'pickup'
                                             ? formatRupiah(subtotal)
-                                            : selectedShipping
+                                            : form.shipping
                                               ? formatRupiah(total)
                                               : formatRupiah(subtotal)}
                                     </span>
@@ -535,10 +610,7 @@ export default function CheckoutPage() {
                                     className="mt-6 w-full gap-2"
                                     size="lg"
                                     asChild
-                                    disabled={
-                                        shippingMethod === 'delivery' &&
-                                        !selectedShipping
-                                    }
+                                    disabled={shippingMethod === 'delivery'}
                                 >
                                     <Link href="/payment">
                                         Lanjut Bayar{' '}
