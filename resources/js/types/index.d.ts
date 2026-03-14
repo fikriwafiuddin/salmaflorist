@@ -156,3 +156,12 @@ export interface Courier {
     code: string;
     name: string;
 }
+
+export interface ShippingCost {
+    name: string;
+    code: string;
+    service: string;
+    description: string;
+    cost: number;
+    etd: string;
+}
