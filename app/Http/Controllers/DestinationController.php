@@ -35,7 +35,7 @@ class DestinationController extends Controller
 
     public function getShippingCost(ShippingCostRequest $request)
     {
-        $shippingCosts = $this->destinationService->getShippingCost($request->validated());
+        $shippingCosts = $this->destinationService->getShippingCost($request->validated(), auth()->id());
         return response()->json($shippingCosts);
     }
 }

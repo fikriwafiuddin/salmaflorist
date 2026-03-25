@@ -141,6 +141,10 @@ export default function ContentCheckoutPage({
         return total + price * item.quantity;
     }, 0);
     const total = subtotal + (form.shipping?.cost || 0);
+    const totalweight = cart.items.reduce((total, item) => {
+        const weight = item?.product?.weight || 0;
+        return total + weight * item.quantity;
+    }, 0);
 
     return (
         <>
@@ -558,7 +562,8 @@ export default function ContentCheckoutPage({
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
-                                                    item.unit_price *
+                                                    (item?.product?.price ||
+                                                        item.unit_price) *
                                                         item.quantity,
                                                 )}
                                             </span>
@@ -575,6 +580,14 @@ export default function ContentCheckoutPage({
                                         </span>
                                         <span className="font-medium">
                                             {formatRupiah(subtotal)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                            Total Bobot
+                                        </span>
+                                        <span className="font-medium">
+                                            {totalweight} gram
                                         </span>
                                     </div>
                                     <div className="flex justify-between">

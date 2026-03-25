@@ -3,9 +3,14 @@
 namespace App\Services;
 
 use Http;
+use App\Services\CartService;
 
 class DestinationService
 {
+    private $cartService;
+    public function __construct(CartService $cartService) {
+        $this->cartService = $cartService;
+    }
     public function getProvinces()
     {
         try {
@@ -55,8 +60,17 @@ class DestinationService
         return $response->json();
     }
 
-    public function getShippingCost($data)
+    public function getShippingCost($data, $userId)
     {
+        $cart = $this->cartService->getByUserId($userId);
+        $totalweight = $cart->items->sum(function ($item) {
+            return ($item->product->weight ?? 0) * $item->quantity;
+        });
+
+        if ($totalweight <= 0) {
+            $totalweight = 1000;
+        }
+
         try {
             $response = Http::withHeaders([
                 'key' => config('app.rajaongkir_api_key'),
@@ -65,7 +79,7 @@ class DestinationService
                 'query' => [
                     'origin' => 2893,
                     'destination' => $data['destination'],
-                    'weight' => $data['weight'] ?? 1000,
+                    'weight' => $totalweight,
                     'courier' => $data['courier'],
                 ]
             ])->post('https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost');
