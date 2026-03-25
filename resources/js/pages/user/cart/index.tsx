@@ -118,7 +118,7 @@ export default function CartPage({ cart }: CartPageProps) {
                             Keranjang Belanja
                         </h1>
 
-                        <FormCustomItem type="ADD">
+                        {/* <FormCustomItem type="ADD">
                             <Button
                                 variant="outline"
                                 className="gap-2 border-primary text-primary hover:bg-primary/5"
@@ -126,7 +126,7 @@ export default function CartPage({ cart }: CartPageProps) {
                                 <PlusCircle className="h-4 w-4" />
                                 Tambah Item Custom
                             </Button>
-                        </FormCustomItem>
+                        </FormCustomItem> */}
                     </div>
 
                     {cart.items.length === 0 ? (
@@ -149,11 +149,11 @@ export default function CartPage({ cart }: CartPageProps) {
                                         <ArrowRight className="ml-2 h-4 w-4" />
                                     </Link>
                                 </Button>
-                                <FormCustomItem type="ADD">
+                                {/* <FormCustomItem type="ADD">
                                     <Button variant="secondary">
                                         Buat Pesanan Kustom
                                     </Button>
-                                </FormCustomItem>
+                                </FormCustomItem> */}
                             </div>
                         </div>
                     ) : (
