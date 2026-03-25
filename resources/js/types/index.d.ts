@@ -10,6 +10,7 @@ export interface Product {
     id: number;
     name: string;
     price: number;
+    weight: number;
     description: string;
     image: string;
     category_id: number;

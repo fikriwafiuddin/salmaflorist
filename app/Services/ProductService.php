@@ -46,7 +46,7 @@ class ProductService
 
     public function getById(int $id)
     {
-        $product = Product::select(['id', 'name', 'price', 'image', 'category_id', 'description'])->with(['category'])->findOrFail($id);
+        $product = Product::select(['id', 'name', 'price', 'weight', 'image', 'category_id', 'description'])->with(['category'])->findOrFail($id);
 
         return $product;
     }

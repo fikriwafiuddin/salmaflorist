@@ -40,12 +40,14 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
         name: string;
         image: null | File;
         price: string;
+        weight: string;
         category_id: string;
         description: string;
     }>({
         name: '',
         image: null,
         price: '',
+        weight: '',
         category_id: '',
         description: '',
     });
@@ -122,40 +124,40 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
                                     )}
                                 </div>
 
-                                <div>
-                                    <Label
-                                        htmlFor="name"
-                                        className={
-                                            errors.name
-                                                ? 'text-destructive'
-                                                : ''
-                                        }
-                                    >
-                                        Nama
-                                    </Label>
-                                    <Input
-                                        name="name"
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) =>
-                                            setData('name', e.target.value)
-                                        }
-                                        className={
-                                            errors.name
-                                                ? 'border-destructive focus-visible:ring-destructive'
-                                                : ''
-                                        }
-                                        placeholder="Masukkan nama"
-                                    />
-                                    {errors.name && (
-                                        <span className="text-sm text-destructive">
-                                            {errors.name}
-                                        </span>
-                                    )}
-                                </div>
-
                                 <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <Label
+                                            htmlFor="name"
+                                            className={
+                                                errors.name
+                                                    ? 'text-destructive'
+                                                    : ''
+                                            }
+                                        >
+                                            Nama
+                                        </Label>
+                                        <Input
+                                            name="name"
+                                            id="name"
+                                            type="text"
+                                            value={data.name}
+                                            onChange={(e) =>
+                                                setData('name', e.target.value)
+                                            }
+                                            className={
+                                                errors.name
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }
+                                            placeholder="Masukkan nama"
+                                        />
+                                        {errors.name && (
+                                            <span className="text-sm text-destructive">
+                                                {errors.name}
+                                            </span>
+                                        )}
+                                    </div>
+
                                     <div>
                                         <Label
                                             htmlFor="category_id"
@@ -205,6 +207,47 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
                                         {errors.category_id && (
                                             <span className="text-sm text-destructive">
                                                 {errors.category_id}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <Label
+                                            htmlFor="weight"
+                                            className={
+                                                errors.weight
+                                                    ? 'text-destructive'
+                                                    : ''
+                                            }
+                                        >
+                                            Bobot (gram)
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            id="weight"
+                                            name="weight"
+                                            value={data.weight}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'weight',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            onWheel={(e) =>
+                                                e.currentTarget.blur()
+                                            }
+                                            className={
+                                                errors.weight
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }
+                                            placeholder="Masukkan bobot"
+                                        />
+                                        {errors.weight && (
+                                            <span className="text-sm text-destructive">
+                                                {errors.weight}
                                             </span>
                                         )}
                                     </div>

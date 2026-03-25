@@ -24,6 +24,7 @@ class ProductRequestCreate extends FormRequest
         return [
             'name' => 'required|string|min:3|max:55',
             'price' => 'required|numeric|min:1',
+            'weight' => 'required|numeric|min:1',
             'description' => 'required|string',
             'image' => 'required|file|max:2048|mimes:png,jpg,jpeg,webp',
             'category_id' => 'required|exists:categories,id'
@@ -45,6 +46,9 @@ class ProductRequestCreate extends FormRequest
             'price.required' => 'Kolom harga harus diisi.',
             'price.numeric' => 'Kolom harga harus berupa angka.',
             'price.min' => 'Kolom harga harus berupa angka positif.',
+            'weight.required' => 'Kolom bobot harus diisi.',
+            'weight.numeric' => 'Kolom bobot harus berupa angka.',
+            'weight.min' => 'Kolom bobot harus berupa angka positif.',
             'description.required' => 'Kolom deskripsi harus diisi.',
             'description.string' => 'Kolom deskripsi harus berupa string.',
             'image.required' => 'Kolom gambar harus diisi.',

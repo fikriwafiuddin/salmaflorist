@@ -19,6 +19,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Papan Bunga Ucapan Selamat',
                 'price' => 550000,
                 'description' => 'Papan bunga warna cerah dengan tulisan selamat.',
+                'weight' => 5000,
                 'image' => 'products\/wRzGcTu2gVWWnasMnYxFdQtaYmQuRRHRNQKDmNEf.jpg'
             ],
             [
@@ -26,6 +27,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Buket Campuran Pastel',
                 'price' => 270000,
                 'description' => 'Campuran bunga warna pastel seperti pink, peach, dan putih yang menghadirkan kesan lembut.',
+                'weight' => 1000,
                 'image' => 'products\/2PQzs0sV7iet8Yp7VyuRd9M5OBXDNcVbCytkX7CR.jpg'
             ],
             [
@@ -33,6 +35,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Bunga Meja Lily Putih',
                 'price' => 280000,
                 'description' => 'Arragement bunga lily putih dalam vas kaca modern, cocok untuk dekorasi ruangan.',
+                'weight' => 2000,
                 'image' => 'products\/4ikv9Egb9S1uOq0VMaQehGJK4zyKk9eWB7Vm2lOU.jpg'
             ],
             [
@@ -40,6 +43,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Bouquet Tulip Putih Elegant',
                 'price' => 320000,
                 'description' => 'Bouquet berisi 10 tulip putih impor dengan tampilan sederhana dan mewah.',
+                'weight' => 1000,
                 'image' => 'products\/zSF54wH3Nb9wmDCxGGyNfMpSHDyuRg4SVVIvTlIh.webp'
             ],
             [
@@ -47,6 +51,7 @@ class ProductSeeder extends Seeder
                 'name' => 'Bouquet Mawar Merah Premium',
                 'price' => 350000,
                 'description' => 'Bouquet elegan berisi 12 mawar merah premium yang dibungkus dengan kertas coklat klasik dan pita satin.',
+                'weight' => 1200,
                 'image' => 'products\/ISo0jilcHdM8rPlTMJpg7EAccjyyAOPsOWarnsM3.webp'
             ]
         ];
@@ -56,6 +61,7 @@ class ProductSeeder extends Seeder
                 'name' => $product['name'],
                 'category_id' => $product['category_id'],
                 'price' => $product['price'],
+                'weight' => $product['weight'],
                 'description' => $product['description'],
                 'image' => $product['image']
             ]);

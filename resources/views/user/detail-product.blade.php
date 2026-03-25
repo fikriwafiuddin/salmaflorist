@@ -113,6 +113,9 @@
                 >
                     Rp&nbsp;{{ Number::format($product['price'], locale: 'id') }}
                 </span>
+                <span class="block text-muted-foreground text-sm">
+                    Bobot: {{ $product['weight'] }} gr
+                </span>
             </div>
             <div>
                 <label class="font-semibold mb-2 block">
