@@ -70,6 +70,7 @@ Route::name('user.')->group(function() {
         Route::patch('/cart/{id}', [CartController::class, 'update'])->name('cart.update');
         Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.destroy');
         Route::get('/checkout', [UserOrderController::class, 'create'])->name('checkout.index');
+        Route::post('/checkout', [UserOrderController::class, 'store'])->name('checkout.store');
         Route::get('/payment', fn() => Inertia::render('user/payment/index'))->name('payment.index');
         Route::get('/payment/success', fn() => Inertia::render('user/payment/success'))->name('payment.success');
         Route::get('/transactions', fn() => Inertia::render('user/transactions/index'))->name('transactions.index');

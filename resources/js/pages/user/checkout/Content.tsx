@@ -9,13 +9,15 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { COURIERS } from '@/constants';
+import UserLayout from '@/layouts/user-layout';
 import {
     useGetCities,
     useGetDistricts,
     useGetShippingCost,
 } from '@/services/hooks/destinationHook';
 import { Cart, Province, ShippingCost } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import axios, { AxiosError } from 'axios';
 import {
     ArrowLeft,
     ArrowRight,
@@ -26,6 +28,14 @@ import {
     User,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+
+declare global {
+    interface Window {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        snap: any;
+    }
+}
 
 // Removed mock orderItems
 
@@ -73,19 +83,20 @@ export default function ContentCheckoutPage({
     const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>(
         'delivery',
     );
-    const [form, setForm] = useState<{
-        province: string;
-        city: string;
-        district: string;
-        courier: string;
-        shipping: ShippingCost | null;
-    }>({
+    const [form, setForm] = useState({
+        recipient_name: '',
+        whatsapp: '',
+        notes_recipient: '',
         province: '',
         city: '',
         district: '',
         courier: '',
-        shipping: null,
+        shipping: null as ShippingCost | null,
+        address_detail: '',
+        // postal: '',
     });
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { data: cities = [], isPending: isLoadingCities } = useGetCities(
         form.province,
@@ -136,6 +147,62 @@ export default function ContentCheckoutPage({
         }));
     };
 
+    const handlePay = async () => {
+        setIsSubmitting(true);
+
+        const data = {
+            shipping_method: shippingMethod,
+            notes: form.notes_recipient,
+            address:
+                shippingMethod === 'delivery'
+                    ? {
+                          customer_name: form.recipient_name,
+                          whatsapp_number: form.whatsapp,
+                          address_detail: form.address_detail,
+                          province_id: form.province,
+                          city_id: form.city,
+                          district_id: form.district,
+                          notes: form.notes_recipient,
+                      }
+                    : null,
+            courier:
+                shippingMethod === 'delivery'
+                    ? {
+                          code: form.courier,
+                          service: form.shipping?.service,
+                      }
+                    : null,
+        };
+
+        try {
+            const response = await axios.post('/checkout', data);
+
+            if (response.data.success) {
+                window.snap.pay(response.data.snap_token, {
+                    onSuccess: function () {
+                        router.visit('/payment/success');
+                    },
+                    onPending: function () {
+                        router.visit('/transactions');
+                    },
+                    onError: function () {
+                        toast.error('Pembayaran gagal');
+                    },
+                    onClose: function () {
+                        toast.warning('Silahkan selesaikan pembayaran');
+                    },
+                });
+            }
+        } catch (error) {
+            toast.error(
+                (error as AxiosError<{ message: string }>)?.response?.data
+                    ?.message || 'Terjadi kesalahan saat membuat pesanan',
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const subtotal = cart.items.reduce((total, item) => {
         const price = item.product?.price || item.unit_price || 0;
         return total + price * item.quantity;
@@ -147,7 +214,7 @@ export default function ContentCheckoutPage({
     }, 0);
 
     return (
-        <>
+        <UserLayout>
             <Head title="Checkout – Salma Florist" />
 
             <div className="min-h-screen bg-[oklch(0.9789_0.0128_345.48)]">
@@ -218,6 +285,14 @@ export default function ContentCheckoutPage({
                                         <Input
                                             id="recipient_name"
                                             placeholder="Nama lengkap penerima"
+                                            value={form.recipient_name}
+                                            onChange={(e) =>
+                                                setForm({
+                                                    ...form,
+                                                    recipient_name:
+                                                        e.target.value,
+                                                })
+                                            }
                                         />
                                     </div>
                                     <div className="grid gap-2">
@@ -228,6 +303,13 @@ export default function ContentCheckoutPage({
                                             id="whatsapp"
                                             type="tel"
                                             placeholder="08xxxxxxxxxx"
+                                            value={form.whatsapp}
+                                            onChange={(e) =>
+                                                setForm({
+                                                    ...form,
+                                                    whatsapp: e.target.value,
+                                                })
+                                            }
                                         />
                                     </div>
                                     <div className="grid gap-2 sm:col-span-2">
@@ -237,6 +319,14 @@ export default function ContentCheckoutPage({
                                         <Input
                                             id="notes"
                                             placeholder="Misal: warna, pesan di kartu ucapan..."
+                                            value={form.notes_recipient}
+                                            onChange={(e) =>
+                                                setForm({
+                                                    ...form,
+                                                    notes_recipient:
+                                                        e.target.value,
+                                                })
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -432,68 +522,67 @@ export default function ContentCheckoutPage({
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-2">
-                                                        {shippingCosts &&
-                                                            shippingCosts?.map(
-                                                                (opt) => (
-                                                                    <label
-                                                                        key={`${opt.code}-${opt.service}`}
-                                                                        className={`flex cursor-pointer items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
-                                                                            form
-                                                                                .shipping
-                                                                                ?.service ===
-                                                                            opt.service
-                                                                                ? 'border-primary bg-primary/5'
-                                                                                : 'border-input hover:border-primary/40'
-                                                                        }`}
-                                                                    >
-                                                                        <div className="flex items-center gap-3">
-                                                                            <input
-                                                                                type="radio"
-                                                                                name="shipping_option"
-                                                                                value={`${opt.code}-${opt.service}`}
-                                                                                checked={
-                                                                                    form
-                                                                                        .shipping
-                                                                                        ?.service ===
+                                                        {shippingCosts?.map(
+                                                            (opt) => (
+                                                                <label
+                                                                    key={`${opt.code}-${opt.service}`}
+                                                                    className={`flex cursor-pointer items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+                                                                        form
+                                                                            .shipping
+                                                                            ?.service ===
+                                                                        opt.service
+                                                                            ? 'border-primary bg-primary/5'
+                                                                            : 'border-input hover:border-primary/40'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <input
+                                                                            type="radio"
+                                                                            name="shipping_option"
+                                                                            value={`${opt.code}-${opt.service}`}
+                                                                            checked={
+                                                                                form
+                                                                                    .shipping
+                                                                                    ?.service ===
+                                                                                opt.service
+                                                                            }
+                                                                            onChange={() =>
+                                                                                setForm(
+                                                                                    {
+                                                                                        ...form,
+                                                                                        shipping:
+                                                                                            opt,
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                            className="text-primary"
+                                                                        />
+                                                                        <div>
+                                                                            <p className="text-sm font-medium">
+                                                                                {
+                                                                                    opt.name
+                                                                                }{' '}
+                                                                                -{' '}
+                                                                                {
                                                                                     opt.service
                                                                                 }
-                                                                                onChange={() =>
-                                                                                    setForm(
-                                                                                        {
-                                                                                            ...form,
-                                                                                            shipping:
-                                                                                                opt,
-                                                                                        },
-                                                                                    )
+                                                                            </p>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                Estimasi{' '}
+                                                                                {
+                                                                                    opt.etd
                                                                                 }
-                                                                                className="text-primary"
-                                                                            />
-                                                                            <div>
-                                                                                <p className="text-sm font-medium">
-                                                                                    {
-                                                                                        opt.name
-                                                                                    }{' '}
-                                                                                    -{' '}
-                                                                                    {
-                                                                                        opt.service
-                                                                                    }
-                                                                                </p>
-                                                                                <p className="text-xs text-muted-foreground">
-                                                                                    Estimasi{' '}
-                                                                                    {
-                                                                                        opt.etd
-                                                                                    }
-                                                                                </p>
-                                                                            </div>
+                                                                            </p>
                                                                         </div>
-                                                                        <span className="text-sm font-semibold text-primary">
-                                                                            {formatRupiah(
-                                                                                opt.cost,
-                                                                            )}
-                                                                        </span>
-                                                                    </label>
-                                                                ),
-                                                            )}
+                                                                    </div>
+                                                                    <span className="text-sm font-semibold text-primary">
+                                                                        {formatRupiah(
+                                                                            opt.cost,
+                                                                        )}
+                                                                    </span>
+                                                                </label>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -508,10 +597,17 @@ export default function ContentCheckoutPage({
                                                 rows={3}
                                                 placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan..."
                                                 className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-colors focus:ring-2 focus:ring-ring focus:outline-none"
+                                                value={form.address_detail}
+                                                onChange={(e) =>
+                                                    setForm({
+                                                        ...form,
+                                                        address_detail:
+                                                            e.target.value,
+                                                    })
+                                                }
                                             />
                                         </div>
-
-                                        <div className="grid gap-2">
+                                        {/* <div className="grid gap-2">
                                             <Label htmlFor="postal">
                                                 Kode Pos
                                             </Label>
@@ -519,8 +615,15 @@ export default function ContentCheckoutPage({
                                                 id="postal"
                                                 placeholder="64100"
                                                 className="max-w-[160px]"
+                                                value={form.postal}
+                                                onChange={(e) =>
+                                                    setForm({
+                                                        ...form,
+                                                        postal: e.target.value,
+                                                    })
+                                                }
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </SectionCard>
                             )}
@@ -624,13 +727,25 @@ export default function ContentCheckoutPage({
                                 <Button
                                     className="mt-6 w-full gap-2"
                                     size="lg"
-                                    asChild
-                                    disabled={shippingMethod === 'delivery'}
+                                    onClick={handlePay}
+                                    disabled={
+                                        isSubmitting ||
+                                        !form.recipient_name ||
+                                        !form.whatsapp ||
+                                        (shippingMethod === 'delivery' &&
+                                            (!form.district ||
+                                                !form.shipping ||
+                                                !form.address_detail))
+                                    }
                                 >
-                                    <Link href="/payment">
-                                        Lanjut Bayar{' '}
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
+                                    {isSubmitting ? (
+                                        'Memproses...'
+                                    ) : (
+                                        <>
+                                            Lanjut Bayar{' '}
+                                            <ArrowRight className="h-4 w-4" />
+                                        </>
+                                    )}
                                 </Button>
 
                                 <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -641,6 +756,6 @@ export default function ContentCheckoutPage({
                     </div>
                 </main>
             </div>
-        </>
+        </UserLayout>
     );
 }

@@ -6,11 +6,128 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\CashTransaction;
+use App\Models\Address;
+use App\Models\CourierService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
+    public function createFromUser(array $data, int $userId)
+    {
+        return DB::transaction(function () use ($data, $userId) {
+            // 1. Get Cart
+            $cartService = app(CartService::class);
+            $cart = $cartService->getByUserId($userId);
+
+            if ($cart->items->isEmpty()) {
+                throw new \Exception('Keranjang kosong');
+            }
+
+            $totalAmount = 0;
+
+            // 2. Handle Shipping (if delivery)
+            $addressId = null;
+            $courierServiceId = null;
+            $shippingCost = 0;
+
+            if ($data['shipping_method'] === 'delivery') {
+                // Fetch location names from IDs
+                $destinationService = app(DestinationService::class);
+                
+                // Get name for province, city, district
+                $provinces = $destinationService->getProvinces();
+                $province = collect($provinces)->firstWhere('id', $data['address']['province_id']);
+                $provinceName = $province['name'] ?? '';
+
+                $cities = $destinationService->getCities($data['address']['province_id']);
+                $city = collect($cities)->firstWhere('id', $data['address']['city_id']);
+                $cityName = $city['name'] ?? '';
+
+                $districts = $destinationService->getDistricts($data['address']['city_id']);
+                $district = collect($districts)->firstWhere('id', $data['address']['district_id']);
+                $districtName = $district['name'] ?? '';
+
+                $address = Address::create([
+                    'customer_name' => $data['address']['customer_name'],
+                    'whatsapp_number' => $data['address']['whatsapp_number'],
+                    'address_detail' => $data['address']['address_detail'],
+                    'province_id' => $data['address']['province_id'],
+                    'province_name' => $provinceName,
+                    'city_id' => $data['address']['city_id'],
+                    'city_name' => $cityName,
+                    'district_id' => $data['address']['district_id'],
+                    'district_name' => $districtName,
+                ]);
+                $addressId = $address->id;
+
+                // Validate shipping cost
+                $costs = $destinationService->getShippingCost([
+                    'destination' => $data['address']['district_id'],
+                    'courier' => $data['courier']['code']
+                ], $userId);
+
+                $selectedCost = collect($costs)->firstWhere('service', $data['courier']['service']);
+                
+                if (!$selectedCost) {
+                    throw new \Exception('Layanan pengiriman tidak valid');
+                }
+
+                $courierService = CourierService::create([
+                    'name' => $selectedCost['name'],
+                    'code' => $selectedCost['code'],
+                    'service' => $selectedCost['service'],
+                    'description' => $selectedCost['description'],
+                    'cost' => $selectedCost['cost'],
+                    'etd' => $selectedCost['etd'],
+                ]);
+                $courierServiceId = $courierService->id;
+                $shippingCost = $selectedCost['cost'];
+            }
+
+            // 3. Create Order
+            $order = Order::create([
+                'user_id' => $userId,
+                'status' => 'pending',
+                'is_paid' => false,
+                'shipping_method' => $data['shipping_method'],
+                'address_id' => $addressId,
+                'courier_service_id' => $courierServiceId,
+                'shipping_cost' => $shippingCost,
+                'total_amount' => 0, // temporary
+                'notes' => $data['notes'] ?? null,
+                'schedule' => Carbon::now('Asia/Jakarta')->addDays(1), // Default schedule
+            ]);
+
+            // 4. Move items from cart to order
+            foreach ($cart->items as $item) {
+                $unitPrice = $item->is_custom ? $item->unit_price : ($item->product->price ?? 0);
+                $subtotal = $unitPrice * $item->quantity;
+                $totalAmount += $subtotal;
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item->product_id,
+                    'is_custom' => $item->is_custom,
+                    'custom_name' => $item->is_custom ? $item->custom_name : ($item->product->name ?? 'Unknown'),
+                    'custom_description' => $item->custom_description,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
+                ]);
+            }
+
+            $order->update([
+                'total_amount' => $totalAmount + $shippingCost,
+            ]);
+
+            // 5. Clear Cart
+            $cart->items()->delete();
+
+            return $order;
+        });
+    }
+
     public function create (array $data)
     {
         return DB::transaction(function () use ($data) {
@@ -477,5 +594,13 @@ class OrderService
                 'fill' => 'var(--color-unpaid)',
             ],
         ];
+    }
+
+    public function createByUser($data) {
+        $user = auth()->user();
+
+        return DB::transaction(function () use ($data, $user) {
+
+        });
     }
 }
