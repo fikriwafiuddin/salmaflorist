@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import axios, { AxiosError } from 'axios';
 import {
     CheckCircle2,
     ChevronDown,
@@ -10,7 +11,15 @@ import {
     Truck,
     XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+
+declare global {
+    interface Window {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        snap: any;
+    }
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type OrderStatus =
@@ -40,58 +49,30 @@ interface Transaction {
     address?: string;
 }
 
-// ── Mock data ──────────────────────────────────────────────────────────────
-const mockTransactions: Transaction[] = [
-    {
-        id: 'SLM-2403040003',
-        date: '2026-03-04T07:30:00+07:00',
-        status: 'processing',
-        shipping_method: 'delivery',
-        courier: 'JNE REG',
-        items: [
-            { name: 'Buket Mawar Merah', qty: 1, price: 185000 },
-            { name: 'Hand Bouquet Sunflower', qty: 2, price: 230000 },
-        ],
-        subtotal: 645000,
-        shipping_cost: 15000,
-        address: 'Jl. Merdeka No. 5, Kota Kediri, Jawa Timur 64132',
-    },
-    {
-        id: 'SLM-2402280001',
-        date: '2026-02-28T14:00:00+07:00',
-        status: 'delivered',
-        shipping_method: 'delivery',
-        courier: 'SiCepat BEST',
-        tracking: 'SC123456789ID',
-        items: [{ name: 'Flower Box Premium', qty: 1, price: 320000 }],
-        subtotal: 320000,
-        shipping_cost: 14000,
-        address: 'Jl. Sudirman No. 21, Kota Kediri, Jawa Timur 64121',
-    },
-    {
-        id: 'SLM-2402100002',
-        date: '2026-02-10T10:00:00+07:00',
-        status: 'cancelled',
-        shipping_method: 'pickup',
-        items: [
-            { name: 'Buket Wisuda Ungu', qty: 1, price: 250000 },
-            { name: 'Standing Flower S', qty: 1, price: 185000 },
-        ],
-        subtotal: 435000,
-        shipping_cost: 0,
-    },
-    {
-        id: 'SLM-2403030001',
-        date: '2026-03-03T16:15:00+07:00',
-        status: 'pending_payment',
-        shipping_method: 'delivery',
-        courier: 'J&T Reguler',
-        items: [{ name: 'Hand Bouquet Tulip', qty: 1, price: 210000 }],
-        subtotal: 210000,
-        shipping_cost: 13000,
-        address: 'Jl. Ahmad Yani No. 99, Kota Blitar, Jawa Timur 66111',
-    },
-];
+interface OrderItemModel {
+    product?: { name: string };
+    custom_name?: string;
+    quantity: number;
+    unit_price: number;
+}
+
+interface OrderModel {
+    id: number;
+    created_at: string;
+    status: string;
+    shipping_method: 'delivery' | 'pickup';
+    courier_service?: { name: string; service: string };
+    shipping_cost: number;
+    address?: {
+        address_detail: string;
+        district_name: string;
+        city_name: string;
+        province_name: string;
+    };
+    order_items: OrderItemModel[];
+}
+
+// Removed mock data
 
 // ── Stepper config ─────────────────────────────────────────────────────────
 const STEPS_DELIVERY: {
@@ -169,6 +150,60 @@ function formatDate(iso: string) {
         hour: '2-digit',
         minute: '2-digit',
     });
+}
+
+function CountdownTimer({ createdAt }: { createdAt: string }) {
+    const targetDate = useMemo(
+        () => new Date(new Date(createdAt).getTime() + 24 * 60 * 60 * 1000),
+        [createdAt],
+    );
+    const [timeLeft, setTimeLeft] = useState<{
+        h: number;
+        m: number;
+        s: number;
+    } | null>(null);
+    const [expired, setExpired] = useState(false);
+
+    useEffect(() => {
+        const calculate = () => {
+            const now = new Date().getTime();
+            const distance = targetDate.getTime() - now;
+
+            if (distance < 0) {
+                setExpired(true);
+                setTimeLeft(null);
+                return true;
+            } else {
+                setTimeLeft({
+                    h: Math.floor(
+                        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+                    ),
+                    m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                    s: Math.floor((distance % (1000 * 60)) / 1000),
+                });
+                return false;
+            }
+        };
+
+        calculate();
+        const timer = setInterval(() => {
+            if (calculate()) clearInterval(timer);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [targetDate]);
+
+    if (expired)
+        return <span className="font-semibold text-red-500">Kadaluarsa</span>;
+    if (!timeLeft) return null;
+
+    return (
+        <span className="font-mono font-bold text-primary">
+            {timeLeft.h.toString().padStart(2, '0')}:
+            {timeLeft.m.toString().padStart(2, '0')}:
+            {timeLeft.s.toString().padStart(2, '0')}
+        </span>
+    );
 }
 
 // ── Status Stepper ─────────────────────────────────────────────────────────
@@ -261,9 +296,22 @@ function StatusStepper({
 }
 
 // ── Transaction Card ───────────────────────────────────────────────────────
-function TransactionCard({ tx }: { tx: Transaction }) {
+function TransactionCard({
+    tx,
+    onPay,
+}: {
+    tx: Transaction;
+    onPay: (id: string) => void;
+}) {
     const [open, setOpen] = useState(false);
     const total = tx.subtotal + tx.shipping_cost;
+
+    const isExpired = useMemo(() => {
+        const targetDate = new Date(
+            new Date(tx.date).getTime() + 24 * 60 * 60 * 1000,
+        );
+        return new Date() > targetDate;
+    }, [tx.date]);
 
     return (
         <div
@@ -293,8 +341,25 @@ function TransactionCard({ tx }: { tx: Transaction }) {
                     <p className="text-lg font-bold text-primary">
                         {formatRupiah(total)}
                     </p>
+                    {tx.status === 'pending_payment' && !isExpired && (
+                        <button
+                            onClick={() => onPay(tx.id)}
+                            className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-primary/90 focus:ring-2 focus:ring-primary/20"
+                        >
+                            Bayar Sekarang
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {tx.status === 'pending_payment' && (
+                <div className="flex items-center justify-between border-t border-dashed border-pink-100 bg-pink-50/30 px-5 py-2">
+                    <span className="text-xs text-muted-foreground">
+                        Sisa waktu pembayaran:
+                    </span>
+                    <CountdownTimer createdAt={tx.date} />
+                </div>
+            )}
 
             {/* ── Product preview ─────────────────────────────────── */}
             <div className="border-t border-dashed border-pink-100 px-5 py-3">
@@ -412,8 +477,78 @@ function TransactionCard({ tx }: { tx: Transaction }) {
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────
-export default function TransactionHistoryPage() {
+export default function TransactionHistoryPage({
+    orders,
+}: {
+    orders: OrderModel[];
+}) {
     const [filter, setFilter] = useState<'all' | OrderStatus>('all');
+
+    const handlePayNow = async (orderId: string) => {
+        try {
+            const response = await axios.post(`/transactions/${orderId}/pay`);
+            if (response.data.success) {
+                window.snap.pay(response.data.snap_token, {
+                    onSuccess: () => router.visit('/payment/success'),
+                    onPending: () => router.visit('/transactions'),
+                    onError: () => toast.error('Pembayaran gagal'),
+                    onClose: () =>
+                        toast.warning('Silahkan selesaikan pembayaran'),
+                });
+            }
+        } catch (error) {
+            const axiosError = error as AxiosError<{ message: string }>;
+            toast.error(
+                axiosError.response?.data?.message ||
+                    'Gagal menyiapkan pembayaran',
+            );
+        }
+    };
+
+    const mappedTransactions: Transaction[] = orders.map((order) => {
+        const items: OrderItem[] = order.order_items.map((item) => ({
+            name: item.product?.name || item.custom_name || 'Produk',
+            qty: item.quantity,
+            price: item.unit_price,
+        }));
+
+        const subtotal = items.reduce(
+            (acc, item) => acc + item.price * item.qty,
+            0,
+        );
+
+        return {
+            id: order.id.toString(),
+            date: order.created_at,
+            status: (function (s: string): OrderStatus {
+                switch (s) {
+                    case 'pending':
+                        return 'pending_payment';
+                    case 'paid':
+                        return 'payment_verified';
+                    case 'process':
+                        return 'processing';
+                    case 'completed':
+                        return 'delivered';
+                    case 'canceled':
+                        return 'cancelled';
+                    default:
+                        return 'pending_payment';
+                }
+            })(order.status),
+            shipping_method: order.shipping_method,
+            courier: order.courier_service
+                ? `${order.courier_service.name} ${order.courier_service.service}`
+                : undefined,
+            tracking: 'SALMA-TRACK-DUMMY', // Dummy as requested
+            items: items,
+            subtotal: subtotal,
+            shipping_cost: order.shipping_cost || 0,
+            address: order.address
+                ? `${order.address.address_detail}, ${order.address.district_name}, ${order.address.city_name}, ${order.address.province_name}`
+                : undefined,
+        };
+    });
 
     const filters: { key: 'all' | OrderStatus; label: string }[] = [
         { key: 'all', label: 'Semua' },
@@ -425,8 +560,8 @@ export default function TransactionHistoryPage() {
 
     const filtered =
         filter === 'all'
-            ? mockTransactions
-            : mockTransactions.filter((t) => t.status === filter);
+            ? mappedTransactions
+            : mappedTransactions.filter((t) => t.status === filter);
 
     return (
         <>
@@ -476,7 +611,7 @@ export default function TransactionHistoryPage() {
                         Riwayat Transaksi
                     </h1>
                     <p className="mb-6 text-sm text-muted-foreground">
-                        {mockTransactions.length} transaksi ditemukan
+                        {mappedTransactions.length} transaksi ditemukan
                     </p>
 
                     {/* ── Filter tabs ───────────────────────────────── */}
@@ -507,7 +642,11 @@ export default function TransactionHistoryPage() {
                     ) : (
                         <div className="space-y-4">
                             {filtered.map((tx) => (
-                                <TransactionCard key={tx.id} tx={tx} />
+                                <TransactionCard
+                                    key={tx.id}
+                                    tx={tx}
+                                    onPay={handlePayNow}
+                                />
                             ))}
                         </div>
                     )}
