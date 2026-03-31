@@ -137,11 +137,16 @@ class OrderService
                 ->setTimezone('Asia/Jakarta')
                 ->format('Y-m-d H:i:s');
 
-            $order = Order::create([
-                'customer_name'   => $data['customer_name'],
+            // Create address first
+            $address = Address::create([
+                'customer_name' => $data['customer_name'],
                 'whatsapp_number' => $data['whatsapp_number'],
-                'address'         => $data['address'],
-                'status'          => 'process',
+                'address_detail' => $data['address'] ?? "-",
+            ]);
+
+            $order = Order::create([
+                'address_id'      => $address->id,
+                'status'          => "process",
                 'is_paid'         => $data['is_paid'],
                 'shipping_method' => $data['shipping_method'],
                 'schedule'        => $schedule,
@@ -211,6 +216,15 @@ class OrderService
             
             $order->update($data);
 
+            // Update associated address if it exists, or create one
+            if ($order->address) {
+                $order->address->update([
+                    'customer_name' => $data['customer_name'] ?? $order->address->customer_name,
+                    'whatsapp_number' => $data['whatsapp_number'] ?? $order->address->whatsapp_number,
+                    'address_detail' => $data['address'] ?? $order->address->address_detail,
+                ]);
+            }
+
             if (!$wasPaid && $isPaid) {
                 CashTransaction::create([
                     'order_id' => $order->id,
@@ -233,6 +247,10 @@ class OrderService
     {
         $order = $this->getById($id);
 
+        if (!$order->is_paid && in_array($data['status'], ['process', 'completed'])) {
+            throw new \Exception('Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
+        }
+
         return $order->update(['status' => $data['status']]);
     }
 
@@ -246,7 +264,7 @@ class OrderService
     public function getAll(object $request)
     {
         $year = $request->year ?? Carbon::now()->year;
-        $month = $request->month ?? Carbon::now()->month;
+        $month = $request->month;
 
         if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
             $year = Carbon::now()->year;
@@ -259,29 +277,36 @@ class OrderService
         }
 
         $orders = Order::query()
+                    ->leftJoin("addresses", "orders.address_id", "=", "addresses.id")
+                    ->leftJoin("users", "orders.user_id", "=", "users.id")
+                    ->select("orders.*")
                     ->when($request->customer_name, function ($query, $customer_name) {
-                        $query->where('customer_name', 'like', "%{$customer_name}%");
+                        $query->where(function ($q) use ($customer_name) {
+                            $q->where("addresses.customer_name", "like", "%{$customer_name}%")
+                              ->orWhere("users.name", "like", "%{$customer_name}%");
+                        });
                     })
                     ->when($request->whatsapp, function ($query, $whatsapp) {
-                        $query->where('whatsapp_number', 'like', "%{$whatsapp}%");
+                        $query->where("addresses.whatsapp_number", "like", "%{$whatsapp}%");
                     })
-                    ->whereYear('created_at', $year)
-                    ->whereMonth('created_at', $month)
-                    ->when($request->status !== 'all', function ($query) use ($request) {
+                    ->whereYear("orders.created_at", $year)
+                    ->whereMonth("orders.created_at", $month)
+                    ->when($request->status !== "all", function ($query) use ($request) {
                         if (!empty($request->status)) {
-                            $query->where('status', strtolower($request->status));
+                            $query->where("orders.status", strtolower($request->status));
                         }
                     })
-                    ->when($request->payment !== 'all', function ($query) use ($request) {
-                        if (!empty($request->payment) && in_array(strtolower($request->payment), ['paid', 'unpaid'])) {
-                            $query->where('is_paid', $request->payment === 'paid');
+                    ->when($request->payment !== "all", function ($query) use ($request) {
+                        if (!empty($request->payment) && in_array(strtolower($request->payment), ["paid", "unpaid"])) {
+                            $query->where("orders.is_paid", $request->payment === "paid");
                         }
                     })
-                    ->when($request->shipping_method !== 'all', function ($query) use ($request) {
-                        if (!empty($request->shipping_method) && in_array(strtolower($request->shipping_method), ['delivery', 'pickup'])) {
-                            $query->where('shipping_method', $request->shipping_method);
+                    ->when($request->shipping_method !== "all", function ($query) use ($request) {
+                        if (!empty($request->shipping_method) && in_array(strtolower($request->shipping_method), ["delivery", "pickup"])) {
+                            $query->where("orders.shipping_method", $request->shipping_method);
                         }
                     })
+                    ->latest("orders.created_at")
                     ->paginate(10);
 
         return $orders;
@@ -362,7 +387,7 @@ class OrderService
 
         $cancelledCount = Order::query()
                         ->whereDate('schedule', $parsedDate)
-                        ->where('status', 'cancelled')
+                        ->where('status', 'canceled')
                         ->count();
 
         return [
@@ -410,7 +435,7 @@ class OrderService
     public function getLatestOrders(int $limit = 5)
     {
         return Order::query()
-                    ->select('id', 'customer_name', 'total_amount')
+                    ->with(['address', 'user'])
                     ->latest('created_at')
                     ->limit($limit)
                     ->get();
@@ -463,8 +488,18 @@ class OrderService
 
     public function getMonthlyOrderSummary(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year  = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->startOfDay();
         $endDate   = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->endOfMonth()->endOfDay();
@@ -508,8 +543,18 @@ class OrderService
 
     public function getMonthlyOrderChart(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year  = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
@@ -542,8 +587,18 @@ class OrderService
 
     public function getShippingMethodStats(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year  = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
@@ -570,8 +625,18 @@ class OrderService
 
     public function getPaymentStatusStats(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year  = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = Carbon::create($year, $month, 1)->endOfMonth();

@@ -22,8 +22,23 @@ class OrderRequestUpdateStatus extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|in:process,completed,canceled'
+            'status' => 'required|in:pending,paid,process,completed,canceled'
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $status = $this->status;
+            $order = $this->route('order') ? \App\Models\Order::find($this->route('order')) : null;
+
+            if ($order && !$order->is_paid && in_array($status, ['process', 'completed'])) {
+                $validator->errors()->add('status', 'Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
+            }
+        });
     }
 
     /**
@@ -35,7 +50,7 @@ class OrderRequestUpdateStatus extends FormRequest
     {
         return [
             'status.required' => 'Status pesanan harus diisi.',
-            'status.in' => 'Status harus berupa completed, process, atau canceled',
+            'status.in' => 'Status tidak valid.',
         ];
     }
 }

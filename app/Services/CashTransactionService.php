@@ -45,18 +45,28 @@ class CashTransactionService
 
     public function getAll(object $request)
     {
-        $year = $request->year ?? Carbon::now()->year;
-        $month = $request->month ?? Carbon::now()->month;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $cashTransactions = CashTransaction::query()
-                                    ->whereYear('transaction_date', $year)
-                                    ->whereMonth('transaction_date', $month)
-                                    ->when($request->type !== 'all', function ($query) use ($request) {
-                                        if (!empty($request->type)) {
-                                            $query->where('type', strtolower($request->type));
-                                        }
-                                    })
-                                    ->paginate(10);
+                                     ->whereYear('transaction_date', $year)
+                                     ->whereMonth('transaction_date', $month)
+                                     ->when($request->type !== 'all', function ($query) use ($request) {
+                                         if (!empty($request->type)) {
+                                             $query->where('type', strtolower($request->type));
+                                         }
+                                     })
+                                     ->paginate(10);
 
         return $cashTransactions;
     }
@@ -192,7 +202,8 @@ class CashTransactionService
                     ->selectRaw("SUM(IF(type = 'expense', amount, 0)) as expense")
                     ->groupBy('date', 'day')
                     ->orderBy('date')
-                    ->get();
+                    ->get()
+                    ->toArray();
 
         $dayNames = [];
         for ($i = $days - 1; $i >= 0; $i--) {
@@ -233,8 +244,18 @@ class CashTransactionService
 
     public function getMonthlyCashTransactionSummary(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
@@ -253,8 +274,18 @@ class CashTransactionService
 
     public function getDailyCashflowStats(object $request)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = Carbon::create($year, $month, 1)->endOfMonth();

@@ -168,8 +168,18 @@ class OrderItemService
 
     public function getMostPopularProductsByMonth(object $request, int $limit = 5)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->startOfDay();
         $endDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->endOfMonth()->endOfDay();
@@ -223,8 +233,18 @@ class OrderItemService
 
     public function getLowestProductsByMonth(object $request, int $limit = 5)
     {
-        $month = $request->month ?? Carbon::now('Asia/Jakarta')->month;
-        $year = $request->year ?? Carbon::now('Asia/Jakarta')->year;
+        $year = $request->year;
+        $month = $request->month;
+
+        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+            $year = Carbon::now()->year;
+        }
+
+        if (!is_numeric($month) || $month < 0 || $month > 11) {
+            $month = Carbon::now()->month;
+        } else {
+            $month = intval($month) + 1;
+        }
 
         $startDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->startOfDay();
         $endDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->endOfMonth()->endOfDay();

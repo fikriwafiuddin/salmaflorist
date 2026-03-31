@@ -7,13 +7,11 @@ use App\Models\OrderItem;
 use App\Models\CashTransaction;
 use App\Models\Address;
 use App\Models\CourierService;
+use App\Models\User;
 
 class Order extends Model
 {
     protected $fillable = [
-        "customer_name",
-        "whatsapp_number",
-        "address",
         "status",
         "is_paid",
         "shipping_method",
@@ -23,9 +21,37 @@ class Order extends Model
         "user_id",
         "address_id",
         "shipping_cost",
-        "courier_service_id",
-        "shipping_cost"
+        "courier_service_id"
     ];
+
+    protected $appends = [
+        "customer_name",
+        "whatsapp_number"
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function getCustomerNameAttribute()
+    {
+        if ($this->address_id && $this->address) {
+            return $this->address->customer_name;
+        }
+        if ($this->user_id && $this->user) {
+            return $this->user->name;
+        }
+        return "Unknown";
+    }
+
+    public function getWhatsappNumberAttribute()
+    {
+        if ($this->address_id && $this->address) {
+            return $this->address->whatsapp_number;
+        }
+        return "-";
+    }
 
     public function orderItems()
     {
