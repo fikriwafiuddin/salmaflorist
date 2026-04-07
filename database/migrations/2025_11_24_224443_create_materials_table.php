@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 25);
             $table->integer('price');
-            $table->integer('stock');
+            $table->integer('stock')->default(0);
             $table->string('unit', 10);
             $table->integer('weight');
             

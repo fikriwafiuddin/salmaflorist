@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Product;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ProductSeeder extends Seeder
 {
@@ -60,6 +61,7 @@ class ProductSeeder extends Seeder
             Product::create([
                 'name' => $product['name'],
                 'category_id' => $product['category_id'],
+                'slug' => Str::slug($product['name']),
                 'price' => $product['price'],
                 'weight' => $product['weight'],
                 'description' => $product['description'],
