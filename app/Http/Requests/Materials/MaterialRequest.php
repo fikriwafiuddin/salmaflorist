@@ -22,10 +22,10 @@ class MaterialRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|min:3|max:25',
-            'price' => 'required|numeric|min:1',
-            'stock' => 'required|integer|min:0',
-            'unit' => 'required|string|min:1|max:10'
+            'name'   => 'required|string|min:3|max:25',
+            'price'  => 'required|numeric|min:1',
+            'unit'   => 'required|string|min:1|max:10',
+            'weight' => 'required|numeric|min:1',
         ];
     }
 
@@ -37,20 +37,20 @@ class MaterialRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Kolom nama harus diisi.',
-            'name.string' => 'Kolom nama harus berupa string.',
-            'name.min' => 'Kolom nama harus minimal 3 karakter.',
-            'name.max' => 'Kolom nama tidak boleh lebih dari 25 karakter.',
-            'price.required' => 'Kolom harga harus diisi.',
-            'price.numeric' => 'Kolom harga harus berupa angka.',
-            'price.min' => 'Kolom harga harus berupa angka positif.',
-            'stock.required' => 'Kolom stok harus diisi.',
-            'stock.integer' => 'Kolom stok harus berupa bilangan bulat.',
-            'stock.min' => 'Kolom stok tidak boleh kurang dari 0.',
-            'unit.required' => 'Kolom unit harus diisi.',
-            'unit.string' => 'Kolom unit harus berupa string.',
-            'unit.min' => 'Kolom unit harus minimal 1 karakter.',
-            'unit.max' => 'Kolom unit tidak boleh lebih dari 10 karakter.'
+            'name.required'      => 'Kolom nama harus diisi.',
+            'name.string'        => 'Kolom nama harus berupa string.',
+            'name.min'           => 'Kolom nama harus minimal 3 karakter.',
+            'name.max'           => 'Kolom nama tidak boleh lebih dari 25 karakter.',
+            'price.required'     => 'Kolom harga harus diisi.',
+            'price.numeric'      => 'Kolom harga harus berupa angka.',
+            'price.min'          => 'Kolom harga harus berupa angka positif.',
+            'unit.required'      => 'Kolom unit harus diisi.',
+            'unit.string'        => 'Kolom unit harus berupa string.',
+            'unit.min'       => 'Kolom unit harus minimal 1 karakter.',
+            'unit.max'       => 'Kolom unit tidak boleh lebih dari 10 karakter.',
+            'weight.required' => 'Kolom berat harus diisi.',
+            'weight.numeric'  => 'Kolom berat harus berupa angka.',
+            'weight.min'      => 'Kolom berat harus berupa angka positif.',
         ];
     }
 }

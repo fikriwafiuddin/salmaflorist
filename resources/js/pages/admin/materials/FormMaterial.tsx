@@ -15,8 +15,8 @@ function FormMaterial({ material }: FormMaterialProps) {
     const { data, setData, processing, submit, errors, isDirty } = useForm({
         name: material?.name || '',
         price: material?.price || '',
-        stock: material?.stock || '',
         unit: material?.unit || '',
+        weight: material?.weight || '',
     });
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -91,27 +91,27 @@ function FormMaterial({ material }: FormMaterialProps) {
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <Label
-                            htmlFor="stock"
-                            className={errors.stock ? 'text-destructive' : ''}
+                            htmlFor="weight"
+                            className={errors.weight ? 'text-destructive' : ''}
                         >
-                            Stok
+                            Berat (Gram)
                         </Label>
                         <Input
-                            name="stock"
-                            id="stock"
+                            name="weight"
+                            id="weight"
                             type="text"
-                            value={data.stock}
-                            onChange={(e) => setData('stock', e.target.value)}
+                            value={data.weight}
+                            onChange={(e) => setData('weight', e.target.value)}
                             className={
-                                errors.stock
+                                errors.weight
                                     ? 'border-destructive focus-visible:ring-destructive'
                                     : ''
                             }
-                            placeholder="Masukkan stok"
+                            placeholder="Masukkan berat"
                         />
-                        {errors.stock && (
+                        {errors.weight && (
                             <span className="text-sm text-destructive">
-                                {errors.stock}
+                                {errors.weight}
                             </span>
                         )}
                     </div>
@@ -119,7 +119,7 @@ function FormMaterial({ material }: FormMaterialProps) {
                     <div>
                         <Label
                             htmlFor="unit"
-                            className={errors.name ? 'text-destructive' : ''}
+                            className={errors.unit ? 'text-destructive' : ''}
                         >
                             Unit
                         </Label>
@@ -134,7 +134,7 @@ function FormMaterial({ material }: FormMaterialProps) {
                                     ? 'border-destructive focus-visible:ring-destructive'
                                     : ''
                             }
-                            placeholder="Masukkan unit"
+                            placeholder="Masukkan unit (contoh: Pcs, Kg)"
                         />
                         {errors.unit && (
                             <span className="text-sm text-destructive">

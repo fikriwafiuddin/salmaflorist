@@ -32,6 +32,11 @@ const columns: ColumnDef<Material>[] = [
         header: 'Unit',
     },
     {
+        accessorKey: 'weight',
+        header: 'Berat (Gr)',
+        cell: ({ row }) => (row.getValue('weight') as number).toLocaleString(),
+    },
+    {
         header: 'Aksi',
         cell: ({ row }) => {
             const id = row.getValue('id') as number;

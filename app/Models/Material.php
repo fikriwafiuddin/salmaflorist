@@ -4,15 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Material extends Model
 {
-    protected $fillable = ['name', 'price', 'stock', 'unit', 'min_stock'];
+    use SoftDeletes;
+
+    protected $fillable = ['name', 'price', 'stock', 'unit', 'weight'];
 
     protected $casts = [
         'price' => 'integer',
         'stock' => 'integer',
-        'min_stock' => 'integer',
+        'weight' => 'integer',
     ];
 
     public function restocks(): HasMany

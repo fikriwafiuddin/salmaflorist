@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Materials\MaterialRequest;
+use App\Http\Requests\Materials\MaterialRestockRequest;
 use App\Models\Material;
 use App\Services\MaterialService;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class MaterialController extends Controller
     public function __construct(MaterialService $materialService) {
         $this->materialService = $materialService;
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -24,7 +26,7 @@ class MaterialController extends Controller
 
         return Inertia::render('admin/materials/index/page', [
             'materials' => $materials,
-            "filters" => $request->only(['search'])
+            'filters'   => $request->only(['search']),
         ]);
     }
 
@@ -62,7 +64,7 @@ class MaterialController extends Controller
         $material = $this->materialService->getById($id);
 
         return Inertia::render('admin/materials/update/page', [
-            'material' => $material
+            'material' => $material,
         ]);
     }
 
@@ -85,4 +87,29 @@ class MaterialController extends Controller
 
         return to_route('materials.index')->with('success', 'Bahan berhasil dihapus');
     }
+
+    /**
+     * Tambah stok bahan melalui restok (POST /materials/{id}/restock).
+     */
+    public function restock(MaterialRestockRequest $request, int $id)
+    {
+        $this->materialService->restock($id, $request->validated());
+
+        return to_route('materials.index')->with('success', 'Restok bahan berhasil dicatat');
+    }
+
+    /**
+     * Ambil riwayat restok bahan (GET /materials/{id}/restock-history).
+     */
+    public function restockHistory(int $id)
+    {
+        $material = $this->materialService->getById($id);
+        $history  = $this->materialService->getRestockHistory($id);
+
+        return response()->json([
+            'material' => $material,
+            'history'  => $history,
+        ]);
+    }
 }
+
