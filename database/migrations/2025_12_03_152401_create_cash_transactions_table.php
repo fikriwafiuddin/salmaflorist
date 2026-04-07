@@ -13,14 +13,15 @@ return new class extends Migration
     {
         Schema::create('cash_transactions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id')->nullable();
-            $table->enum('type', ['income', 'expense']);
-            $table->string('category', 25);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->enum("type", ["income", "expense"]);
+            $table->enum('category', ['order', 'salary', 'restock', 'other']);
+            $table->enum('payment_method', ['cash', 'transfer', 'qris']);
             $table->integer('amount');
             $table->dateTime('transaction_date');
-            $table->text('description')->nullable();
+            $table->text("notes");
 
-            $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

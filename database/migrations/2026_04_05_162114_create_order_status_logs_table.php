@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('testimonials', function (Blueprint $table) {
+        Schema::create('order_status_logs', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('changed_by');
             $table->unsignedBigInteger('order_id');
-            $table->string("review", 300);
-            $table->integer("rating");
+            $table->enum('status', ['pending', 'paid', 'completed', 'ready_for_pickup', 'delivered', 'process', 'canceled']);
+            $table->text('note')->nullable();
 
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('changed_by')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
             $table->timestamps();
         });
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('testimonials');
+        Schema::dropIfExists('order_status_logs');
     }
 };

@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('testimonials', function (Blueprint $table) {
+        Schema::create('shipments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('order_id');
-            $table->string("review", 300);
-            $table->integer("rating");
-
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->string('tracking_number')->unique();
+            $table->string('courier_name');
+            $table->string('courier_code');
+            $table->string('courier_service');
+            $table->string('etd')->nullable();
+            
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
             $table->timestamps();
         });
@@ -29,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('testimonials');
+        Schema::dropIfExists('shipments');
     }
 };

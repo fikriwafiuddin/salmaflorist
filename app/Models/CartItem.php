@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Product;
-use App\Models\Cart;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CartItem extends Model
 {
@@ -12,19 +12,21 @@ class CartItem extends Model
         'cart_id',
         'product_id',
         'quantity',
-        'is_custom',
-        'custom_name',
-        'custom_description',
-        'unit_price',
+        'is_custom'
     ];
 
-    public function cart()
+    public function cart(): BelongsTo
     {
         return $this->belongsTo(Cart::class);
     }
 
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function customDetail(): HasOne
+    {
+        return $this->hasOne(CustomItemDetail::class);
     }
 }

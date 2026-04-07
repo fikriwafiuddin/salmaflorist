@@ -3,23 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Category;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\OrderItem;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ["category_id", "name", "price", "weight", "description", "image"];
+    protected $fillable = ["category_id", "name", "slug", "price", "weight", "description", "image"];
 
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function orderItems()
+    public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function productMaterials(): HasMany
+    {
+        return $this->hasMany(ProductMaterial::class);
+    }
+
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
     }
 }

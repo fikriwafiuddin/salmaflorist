@@ -3,25 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\OrderItem;
-use App\Models\CashTransaction;
-use App\Models\Address;
-use App\Models\CourierService;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
     protected $fillable = [
-        "status",
-        "is_paid",
-        "shipping_method",
-        "schedule",
-        "total_amount",
-        "notes",
         "user_id",
+        "invoice_number",
         "address_id",
+        "status",
+        "shipping_method",
+        "order_source",
+        "schedule",
         "shipping_cost",
-        "courier_service_id"
+        "total_amount",
+        "paid_at",
+        "notes"
     ];
 
     protected $appends = [
@@ -29,9 +28,39 @@ class Order extends Model
         "whatsapp_number"
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function shipment(): HasOne
+    {
+        return $this->hasOne(Shipment::class);
+    }
+
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(OrderStatusLog::class);
+    }
+
+    public function testimonial(): HasOne
+    {
+        return $this->hasOne(Testimonials::class);
+    }
+
+    public function cashTransaction(): HasOne
+    {
+        return $this->hasOne(CashTransaction::class);
     }
 
     public function getCustomerNameAttribute()
@@ -51,25 +80,5 @@ class Order extends Model
             return $this->address->whatsapp_number;
         }
         return "-";
-    }
-
-    public function orderItems()
-    {
-        return $this->hasMany(OrderItem::class);
-    }
-
-    public function cashTransaction()
-    {
-        return $this->hasOne(CashTransaction::class);
-    }
-
-    public function courierService()
-    {
-        return $this->belongsTo(CourierService::class);
-    }
-
-    public function address()
-    {
-        return $this->belongsTo(Address::class);
     }
 }

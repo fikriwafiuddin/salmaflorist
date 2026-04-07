@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Order;
-use App\Models\Product;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OrderItem extends Model
 {
@@ -12,20 +12,23 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'is_custom',
-        'custom_name',
-        'custom_description',
         'quantity',
         'unit_price',
         'subtotal'
     ];
 
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function customDetail(): HasOne
+    {
+        return $this->hasOne(CustomItemDetail::class);
     }
 }

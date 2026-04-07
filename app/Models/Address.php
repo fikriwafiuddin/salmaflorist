@@ -3,24 +3,44 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Address extends Model
 {
     protected $fillable = [
+        "user_id",
         "customer_name",
         "whatsapp_number",
         "address_detail",
-        "notes",
         "province_id",
-        "province_name",
         "city_id",
-        "city_name",
         "district_id",
-        "district_name"
+        "postal_code"
     ];
 
-    public function order()
+    public function user(): BelongsTo
     {
-        return $this->hasOne(Order::class);
+        return $this->belongsTo(User::class);
+    }
+
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }

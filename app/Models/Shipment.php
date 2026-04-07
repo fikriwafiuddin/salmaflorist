@@ -5,19 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Testimonials extends Model
+class Shipment extends Model
 {
     protected $fillable = [
-        "user_id",
-        "order_id",
-        "review",
-        "rating"
+        'order_id',
+        'tracking_number',
+        'courier_name',
+        'courier_code',
+        'courier_service',
+        'etd'
     ];
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     public function order(): BelongsTo
     {

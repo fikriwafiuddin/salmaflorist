@@ -13,16 +13,19 @@ return new class extends Migration
     {
         Schema::create('addresses', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger("user_id")->nullable();
             $table->string("customer_name", 55);
             $table->string("whatsapp_number", 20);
             $table->text("address_detail");
-            $table->integer('province_id')->nullable();
-            $table->string('province_name')->nullable();
-            $table->integer('city_id')->nullable();
-            $table->string('city_name')->nullable();
-            $table->integer('district_id')->nullable();
-            $table->string('district_name')->nullable();
+            $table->integer('province_id');
+            $table->integer('city_id');
+            $table->integer('district_id');
+            $table->string('postal_code');
 
+            $table->foreign("user_id")->references("id")->on("users")->onDelete("cascade");
+            $table->foreign("province_id")->references("id")->on("provinces");
+            $table->foreign("city_id")->references("id")->on("cities");
+            $table->foreign("district_id")->references("id")->on("districts");
             $table->timestamps();
         });
     }

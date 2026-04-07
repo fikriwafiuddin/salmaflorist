@@ -15,9 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('order_id');
             $table->unsignedBigInteger('product_id')->nullable();
-            $table->boolean('is_custom');
-            $table->string('custom_name', 100)->nullable();
-            $table->text('custom_description')->nullable();
+            $table->boolean('is_custom')->default(false);
             $table->integer('quantity');
             $table->integer('unit_price');
             $table->integer('subtotal');

@@ -11,14 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('courier_services', function (Blueprint $table) {
-            $table->id();
+        Schema::create('provinces', function (Blueprint $table) {
+            $table->integer('id');
             $table->string('name');
-            $table->string('code');
-            $table->string('service');
-            $table->string('description');
-            $table->integer('cost');
-            $table->string('etd');
+
+            $table->softDeletes();
             $table->timestamps();
         });
     }
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('courier_services');
+        Schema::dropIfExists('provinces');
     }
 };
