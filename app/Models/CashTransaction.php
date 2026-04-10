@@ -9,12 +9,19 @@ class CashTransaction extends Model
 {
     protected $fillable = [
         'order_id',
+        'batch_stock_id',
         'type',
         'category',
+        'payment_method',
         'amount',
         'transaction_date',
-        'description'
+        'notes'
     ];
+
+    public function batchStock()
+    {
+        return $this->belongsTo(BatchStock::class);
+    }
 
     public function order()
     {

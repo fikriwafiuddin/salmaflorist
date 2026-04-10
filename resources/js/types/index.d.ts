@@ -73,11 +73,13 @@ export interface TimeStamp {
 export interface CashTransaction extends TimeStamp {
     id: number;
     order_id?: number | null;
+    batch_stock_id?: number | null;
     type: 'income' | 'expense';
     category: string;
+    payment_method: 'cash' | 'transfer' | 'qris';
     amount: number;
     transaction_date: Date;
-    description: string;
+    notes: string;
 }
 
 export interface Auth {
@@ -166,4 +168,38 @@ export interface ShippingCost {
     description: string;
     cost: number;
     etd: string;
+}
+
+export interface BatchStock extends TimeStamp {
+    id: number;
+    supplier: string;
+    payment_method: 'cash' | 'transfer' | 'qris';
+    total_amount: number;
+    created_by: number;
+    user?: User;
+    material_stocks?: MaterialStock[];
+}
+
+export interface MaterialStock extends TimeStamp {
+    id: number;
+    batch_stock_id: number;
+    material_id: number;
+    is_active: boolean;
+    initial_quantity: number;
+    remaining_quantity: number;
+    price: number;
+    subtotal: number;
+    expired_date: string | null;
+    material?: Material;
+    batch_stock?: BatchStock;
+}
+
+export interface MaterialStockLog extends TimeStamp {
+    id: number;
+    material_id: number;
+    material_stock_id: number;
+    created_by: number;
+    quantity: number;
+    type: 'in' | 'out';
+    notes: string | null;
 }

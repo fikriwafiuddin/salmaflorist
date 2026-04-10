@@ -33,4 +33,14 @@ class Material extends Model
             ->where('expired_at', '>=', now()->toDateString())
             ->orderBy('expired_at', 'asc');
     }
+
+    public function materialStocks(): HasMany
+    {
+        return $this->hasMany(MaterialStock::class);
+    }
+
+    public function materialStockLogs(): HasMany
+    {
+        return $this->hasMany(MaterialStockLog::class);
+    }
 }

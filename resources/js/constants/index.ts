@@ -14,3 +14,5 @@ export const COURIERS: Courier[] = [
         name: 'SiCepat',
     },
 ];
+
+export const PAYMENT_METHODS: string[] = ['cash', 'transfer', 'qris'];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BatchStockController;
 use App\Http\Controllers\CashTransactionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
@@ -39,6 +40,8 @@ Route::middleware(['auth', 'role:admin'])->prefix("/admin")->group(function () {
     Route::resource('testimonials', TestimonialsController::class);
 
     Route::resource('materials', MaterialController::class);
+    
+    Route::resource('batch-stocks', BatchStockController::class)->only(['index', 'create', 'store', 'show']);
     
     Route::patch('/orders/update-status/{id}', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::get('/orders/export/excel', [OrderController::class, 'exportExcel'])->name('orders.export.excel');

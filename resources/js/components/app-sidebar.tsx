@@ -10,6 +10,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import batchStocks from '@/routes/batch-stocks';
 import cashTransactions from '@/routes/cash-transactions';
 import categories from '@/routes/categories';
 import materials from '@/routes/materials';
@@ -64,6 +65,11 @@ const mainNavItems: NavItem[] = [
         title: 'Bahan',
         href: materials.index(),
         icon: ArchiveIcon,
+    },
+    {
+        title: 'Kulakan',
+        href: batchStocks.index(),
+        icon: TouchpadIcon,
     },
     {
         title: 'Pesanan',
