@@ -30,6 +30,7 @@ import {
     FolderIcon,
     LayoutGrid,
     NotebookIcon,
+    RefreshCwIcon,
     StarIcon,
     TouchpadIcon,
 } from 'lucide-react';
@@ -69,7 +70,7 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Kulakan',
         href: batchStocks.index(),
-        icon: TouchpadIcon,
+        icon: RefreshCwIcon,
     },
     {
         title: 'Pesanan',
