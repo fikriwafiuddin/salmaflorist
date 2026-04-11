@@ -4,33 +4,61 @@ namespace App\Services;
 
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductService
 {
     public function create(array $data)
     {
-        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            $data['image'] = $this->uploadImage($data['image']);
-        }
+        return DB::transaction(function () use ($data) {
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
+                $data['image'] = $this->uploadImage($data['image']);
+            }
 
-        return Product::create($data);
+            $data['slug'] = Str::slug($data['name']);
+
+            $product = Product::create($data);
+
+            if (isset($data['materials'])) {
+                $materials = collect($data['materials'])->mapWithKeys(function ($item) {
+                    return [$item['id'] => ['quantity' => $item['quantity']]];
+                });
+                $product->materials()->sync($materials);
+            }
+
+            return $product;
+        });
     }
 
     public function update(array $data, int $id)
     {
-        $product = Product::findOrFail($id);
+        return DB::transaction(function () use ($data, $id) {
+            $product = Product::findOrFail($id);
 
-        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            if (!empty($product->image)) {
-                $this->deleteImage($product->image);
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
+                if (!empty($product->image)) {
+                    $this->deleteImage($product->image);
+                }
+                $data['image'] = $this->uploadImage($data['image']);
+            } else {
+                $data['image'] = $product->image;
             }
-            $data['image'] = $this->uploadImage($data['image']);
-        } else {
-            $data['image'] = $product->image;
-        }
 
-        return $product->update($data);
+            $data['slug'] = Str::slug($data['name']);
+
+            $product->update($data);
+
+            if (isset($data['materials'])) {
+                $materials = collect($data['materials'])->mapWithKeys(function ($item) {
+                    return [$item['id'] => ['quantity' => $item['quantity']]];
+                });
+                $product->materials()->sync($materials);
+            }
+
+            return $product;
+        });
     }
 
     public function destroy(int $id)
@@ -46,7 +74,9 @@ class ProductService
 
     public function getById(int $id)
     {
-        $product = Product::select(['id', 'name', 'price', 'weight', 'image', 'category_id', 'description'])->with(['category'])->findOrFail($id);
+        $product = Product::select(['id', 'name', 'price', 'weight', 'image', 'category_id', 'description'])
+            ->with(['category', 'materials'])
+            ->findOrFail($id);
 
         return $product;
     }

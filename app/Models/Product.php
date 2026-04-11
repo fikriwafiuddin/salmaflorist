@@ -28,6 +28,11 @@ class Product extends Model
         return $this->hasMany(ProductMaterial::class);
     }
 
+    public function materials()
+    {
+        return $this->belongsToMany(Material::class, 'product_materials')->withPivot('quantity');
+    }
+
     public function cartItems(): HasMany
     {
         return $this->hasMany(CartItem::class);

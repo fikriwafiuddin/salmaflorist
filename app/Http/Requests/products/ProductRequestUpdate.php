@@ -27,7 +27,10 @@ class ProductRequestUpdate extends FormRequest
             'weight' => 'required|numeric|min:1',
             'description' => 'required|string',
             'image' => 'file|max:2048|mimes:png,jpg,jpeg,webp|nullable',
-            'category_id' => 'required|exists:categories,id'
+            'category_id' => 'required|exists:categories,id',
+            'materials' => 'required|array|min:1',
+            'materials.*.id' => 'required|exists:materials,id',
+            'materials.*.quantity' => 'required|numeric|min:1',
         ];
     }
 
@@ -56,6 +59,14 @@ class ProductRequestUpdate extends FormRequest
             'image.mimes' => 'Kolom gambar hanya bisa menggunakan format png, jpg, jpeg, dan webp.',
             'category_id.required' => 'Kolom kategori harus diisi.',
             'category_id.exists' => 'ID kategori yang dipilih tidak valid.',
+            'materials.required' => 'Minimal satu bahan harus ditambahkan.',
+            'materials.array' => 'Data bahan tidak valid.',
+            'materials.min' => 'Harus ada setidaknya satu bahan.',
+            'materials.*.id.required' => 'Bahan harus dipilih.',
+            'materials.*.id.exists' => 'Bahan yang dipilih tidak valid.',
+            'materials.*.quantity.required' => 'Jumlah bahan harus diisi.',
+            'materials.*.quantity.numeric' => 'Jumlah bahan harus berupa angka.',
+            'materials.*.quantity.min' => 'Jumlah bahan minimal 1.',
         ];
     }
 }

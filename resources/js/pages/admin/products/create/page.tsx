@@ -15,10 +15,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from '@/components/upload-file';
 import AppLayout from '@/layouts/app-layout';
 import { create, index, store } from '@/routes/products';
-import { BreadcrumbItem, Category } from '@/types';
+import { BreadcrumbItem, Category, Material } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, FileText } from 'lucide-react';
 import { FormEvent, useCallback, useState } from 'react';
+import ProductMaterialsForm from '../components/ProductMaterialsForm';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -33,9 +34,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 type ProductCreatePageProps = {
     categories: Category[];
+    materials: Material[];
 };
 
-function ProductCreatePage({ categories }: ProductCreatePageProps) {
+function ProductCreatePage({ categories, materials }: ProductCreatePageProps) {
     const { submit, data, setData, processing, errors } = useForm<{
         name: string;
         image: null | File;
@@ -43,6 +45,7 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
         weight: string;
         category_id: string;
         description: string;
+        materials: { id: number; quantity: number }[];
     }>({
         name: '',
         image: null,
@@ -50,6 +53,7 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
         weight: '',
         category_id: '',
         description: '',
+        materials: [],
     });
     const [prevImage, setPrevImage] = useState<null | string>(null);
 
@@ -323,6 +327,33 @@ function ProductCreatePage({ categories }: ProductCreatePageProps) {
                                         </span>
                                     )}
                                 </div>
+
+                                <ProductMaterialsForm
+                                    availableMaterials={materials}
+                                    selectedMaterials={data.materials.map(
+                                        (m) => ({
+                                            ...m,
+                                            name:
+                                                materials.find(
+                                                    (am) => am.id === m.id,
+                                                )?.name || '',
+                                            unit:
+                                                materials.find(
+                                                    (am) => am.id === m.id,
+                                                )?.unit || '',
+                                        }),
+                                    )}
+                                    onChange={(updated) =>
+                                        setData(
+                                            'materials',
+                                            updated.map((m) => ({
+                                                id: m.id,
+                                                quantity: m.quantity,
+                                            })),
+                                        )
+                                    }
+                                    error={errors.materials}
+                                />
 
                                 <Button type="submit" disabled={processing}>
                                     {processing ? <Spinner /> : 'Simpan'}

@@ -18,6 +18,7 @@ export interface Product {
         id: number;
         name: string;
     };
+    materials?: (Material & { pivot: { quantity: number } })[];
 }
 
 export interface Testimony {
@@ -36,6 +37,14 @@ export interface Material {
     stock: number;
     unit: string;
     weight: number;
+}
+
+export interface ProductMaterial {
+    id: number;
+    product_id: number;
+    material_id: number;
+    quantity: number;
+    material?: Material;
 }
 
 export interface Order extends TimeStamp {

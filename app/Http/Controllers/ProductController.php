@@ -9,6 +9,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Services\CategoryService;
+use App\Services\MaterialService;
 use App\Services\ProductService;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -16,10 +17,12 @@ class ProductController extends Controller
 {
     protected $productService;
     protected $categoryService;
+    protected $materialService;
 
-    public function __construct(ProductService $productService, CategoryService $categoryService) {
+    public function __construct(ProductService $productService, CategoryService $categoryService, MaterialService $materialService) {
         $this->productService = $productService;
         $this->categoryService = $categoryService;
+        $this->materialService = $materialService;
     }
 
     /**
@@ -43,9 +46,11 @@ class ProductController extends Controller
     public function create()
     {
         $categories = $this->categoryService->getAll();
+        $materials = $this->materialService->getAllMaterials();
 
         return Inertia::render('admin/products/create/page', [
-            'categories' => $categories
+            'categories' => $categories,
+            'materials' => $materials
         ]);
     }
 
@@ -74,10 +79,12 @@ class ProductController extends Controller
     {
         $product = $this->productService->getById($id);
         $categories = $this->categoryService->getAll();
+        $materials = $this->materialService->getAllMaterials();
 
         return Inertia::render('admin/products/update/page', [
             'product' => $product,
-            'categories' => $categories
+            'categories' => $categories,
+            'materials' => $materials
         ]);
     }
 

@@ -15,10 +15,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from '@/components/upload-file';
 import AppLayout from '@/layouts/app-layout';
 import { edit, index, update } from '@/routes/products';
-import { BreadcrumbItem, Category, Product } from '@/types';
+import { BreadcrumbItem, Category, Material, Product } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, FileText } from 'lucide-react';
 import { FormEvent, useCallback, useState } from 'react';
+import ProductMaterialsForm from '../components/ProductMaterialsForm';
 import { toast } from 'sonner';
 
 const breadcrumbs = (id: number): BreadcrumbItem[] => [
@@ -35,9 +36,10 @@ const breadcrumbs = (id: number): BreadcrumbItem[] => [
 type ProductUpdatePageProps = {
     product: Product;
     categories: Category[];
+    materials: Material[];
 };
 
-function ProductUpdatePage({ product, categories }: ProductUpdatePageProps) {
+function ProductUpdatePage({ product, categories, materials }: ProductUpdatePageProps) {
     const { post, data, setData, processing, errors } = useForm<{
         name: string;
         image: null | File;
@@ -45,6 +47,7 @@ function ProductUpdatePage({ product, categories }: ProductUpdatePageProps) {
         weight: string;
         category_id: string;
         description: string;
+        materials: { id: number; quantity: number }[];
         _method: string;
     }>({
         name: product.name || '',
@@ -53,6 +56,11 @@ function ProductUpdatePage({ product, categories }: ProductUpdatePageProps) {
         weight: product.weight?.toString() || '',
         category_id: product.category_id.toString() || '',
         description: product.description || '',
+        materials:
+            product.materials?.map((m) => ({
+                id: m.id,
+                quantity: m.pivot.quantity,
+            })) || [],
         _method: 'PUT',
     });
     const [prevImage, setPrevImage] = useState<null | string>(
@@ -62,23 +70,8 @@ function ProductUpdatePage({ product, categories }: ProductUpdatePageProps) {
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const formData = new FormData();
-        formData.append('_method', 'PUT');
-        type FormKeys = keyof typeof data;
-
-        (Object.keys(data) as FormKeys[]).forEach((key) => {
-            const value = data[key];
-            if (value !== null && value !== undefined) {
-                formData.append(
-                    key,
-                    value instanceof File ? value : value.toString(),
-                );
-            }
-        });
-
         post(update(product.id).url, {
-            forceFormData: true,
-            onSuccess: () => toast.error('Produk berhasil diupdate'),
+            onSuccess: () => toast.success('Produk berhasil diupdate'),
         });
     };
 
@@ -347,6 +340,33 @@ function ProductUpdatePage({ product, categories }: ProductUpdatePageProps) {
                                         </span>
                                     )}
                                 </div>
+
+                                <ProductMaterialsForm
+                                    availableMaterials={materials}
+                                    selectedMaterials={data.materials.map(
+                                        (m) => ({
+                                            ...m,
+                                            name:
+                                                materials.find(
+                                                    (am) => am.id === m.id,
+                                                )?.name || '',
+                                            unit:
+                                                materials.find(
+                                                    (am) => am.id === m.id,
+                                                )?.unit || '',
+                                        }),
+                                    )}
+                                    onChange={(updated) =>
+                                        setData(
+                                            'materials',
+                                            updated.map((m) => ({
+                                                id: m.id,
+                                                quantity: m.quantity,
+                                            })),
+                                        )
+                                    }
+                                    error={errors.materials}
+                                />
 
                                 <Button type="submit" disabled={processing}>
                                     {processing ? <Spinner /> : 'Simpan'}

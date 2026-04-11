@@ -23,6 +23,11 @@ class MaterialService
             ->withQueryString();
     }
 
+    public function getAllMaterials()
+    {
+        return Material::all();
+    }
+
     /**
      * Ambil data bahan berdasarkan ID.
      */
