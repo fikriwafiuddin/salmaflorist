@@ -19,8 +19,15 @@ class Order extends Model
         "schedule",
         "shipping_cost",
         "total_amount",
+        "is_paid",
         "paid_at",
         "notes"
+    ];
+    
+    protected $casts = [
+        "is_paid" => "boolean",
+        "paid_at" => "datetime",
+        "schedule" => "datetime",
     ];
 
     protected $appends = [

@@ -148,6 +148,7 @@ class OrderService
                 'address_id'      => $address->id,
                 'status'          => "process",
                 'is_paid'         => $data['is_paid'],
+                'paid_at'         => $data['is_paid'] ? now() : null,
                 'shipping_method' => $data['shipping_method'],
                 'schedule'        => $schedule,
                 'total_amount'    => 0,
@@ -226,6 +227,9 @@ class OrderService
             }
 
             if (!$wasPaid && $isPaid) {
+                // Update paid_at too
+                $order->update(['paid_at' => now()]);
+                
                 CashTransaction::create([
                     'order_id' => $order->id,
                     'type' => 'income',
@@ -236,6 +240,7 @@ class OrderService
                 ]);
             }
             elseif ($wasPaid && !$isPaid) {
+                $order->update(['paid_at' => null]);
                 CashTransaction::where('order_id', $order->id)->delete();
             }
 
