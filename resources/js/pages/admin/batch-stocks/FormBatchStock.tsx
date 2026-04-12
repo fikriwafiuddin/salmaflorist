@@ -182,13 +182,13 @@ function FormBatchStock({ materials }: FormBatchStockProps) {
                                         }
                                     >
                                         <SelectTrigger
-                                            className={
+                                            className={`mb-0 ${
                                                 errors[
                                                     `items.${index}.material_id`
                                                 ]
                                                     ? 'border-destructive'
                                                     : ''
-                                            }
+                                            }`}
                                         >
                                             <SelectValue placeholder="Pilih Bahan" />
                                         </SelectTrigger>
