@@ -18,14 +18,13 @@ class OrderItemService
 
         $items = OrderItem::query()
                     ->select('product_id')
-                    ->selectRaw('COALESCE(custom_name, "Custom") as custom_name')
                     ->selectRaw('COUNT(*) as total_orders')
                     ->selectRaw('SUM(quantity) as total_quantity')
                     ->with('product')
                     ->whereHas('order', function ($query) use ($startDate, $endDate) {
                         $query->whereBetween('created_at', [$startDate, $endDate]);
                     })
-                    ->groupBy('product_id', 'custom_name')
+                    ->groupBy('product_id')
                     ->get();
 
         $results = [];
@@ -75,14 +74,14 @@ class OrderItemService
             ->toDateString();
 
         $items = OrderItem::query()
-                    ->select('product_id', 'custom_name')
+                    ->select('product_id')
                     ->selectRaw('COUNT(*) as total_orders')
                     ->selectRaw('SUM(quantity) as total_quantity')
                     ->with('product')
                     ->whereHas('order', function ($query) use ($start, $end) {
                         $query->whereBetween('schedule', [$start, $end]);
                     })
-                    ->groupBy('product_id', 'custom_name')
+                    ->groupBy('product_id')
                     ->get();
 
         $results = [];
@@ -147,18 +146,19 @@ class OrderItemService
     public function getMostPopularCustomItems(int $limit = 5)
     {
         return OrderItem::query()
-                    ->select('custom_name')
+                    ->leftJoin('custom_item_details', 'order_items.id', '=', 'custom_item_details.order_item_id')
+                    ->select('custom_item_details.name as custom_name')
                     ->selectRaw('COUNT(*) as total_orders')
                     ->selectRaw('SUM(quantity) as total_quantity')
                     ->whereNull('product_id')
-                    ->groupBy('custom_name')
+                    ->groupBy('custom_item_details.name')
                     ->orderByDesc('total_quantity')
                     ->limit($limit)
                     ->get()
                     ->map(function ($item) {
                         return [
                             'product_id' => null,
-                            'name' => $item->custom_name,
+                            'name' => $item->custom_name ?? 'Custom Item',
                             'total_orders' => $item->total_orders,
                             'total_quantity' => $item->total_quantity,
                             'is_custom' => true,

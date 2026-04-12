@@ -92,4 +92,12 @@ class MaterialService
             ->latest()
             ->get();
     }
+
+    /**
+     * Ambil bahan yang stoknya habis (stok <= 0).
+     */
+    public function getOutOfStock()
+    {
+        return Material::where('stock', '<=', 0)->get();
+    }
 }
