@@ -13,51 +13,22 @@ class DestinationService
     }
     public function getProvinces()
     {
-        try {
-            $response = Http::withHeaders([
-                'key' => config('app.rajaongkir_api_key'),
-            ])->get('https://rajaongkir.komerce.id/api/v1/destination/province');
-
-
-            return $response->json()['data'] ?? [];
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        return \App\Models\Province::all();
     }
 
     public function getCities($provinceId)
     {
-        try {
-            $response = Http::withHeaders([
-                'key' => config('app.rajaongkir_api_key'),
-            ])->get('https://rajaongkir.komerce.id/api/v1/destination/city/' . $provinceId);
-
-            return $response->json()['data'] ?? [];
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        return \App\Models\City::where('province_id', $provinceId)->get();
     }
 
     public function getDistricts($cityId)
     {
-        try {
-            $response = Http::withHeaders([
-                'key' => config('app.rajaongkir_api_key'),
-            ])->get('https://rajaongkir.komerce.id/api/v1/destination/district/' . $cityId);
-
-            return $response->json()['data'] ?? [];
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        return \App\Models\District::where('city_id', $cityId)->get();
     }
 
     public function getSubdistricts($cityId)
     {
-        $response = Http::withHeaders([
-            'key' => config('rajaongkir_api_key'),
-        ])->get('https://rajaongkir.komerce.id/api/v1/destination/subdistrict?city=' . $cityId);
-
-        return $response->json();
+        return \App\Models\District::where('city_id', $cityId)->get();
     }
 
     public function getShippingCost($data, $userId)

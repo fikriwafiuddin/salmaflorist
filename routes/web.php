@@ -79,6 +79,7 @@ Route::name('user.')->group(function() {
         Route::get('/transactions', [UserOrderController::class, 'index'])->name('transactions.index');
         Route::post('/transactions/{id}/pay', [UserOrderController::class, 'getPaymentToken'])->name('checkout.pay');
 
+        Route::get('/destinations/provinces', [DestinationController::class, 'getProvinces'])->name('destinations.provinces');
         Route::get('/destinations/city/{provinceId}', [DestinationController::class, 'getCities'])->name('destinations.city');
         Route::get('/destinations/district/{cityId}', [DestinationController::class, 'getDistricts'])->name('destinations.district');
         Route::post('/destinations/shipping-costs', [DestinationController::class, 'getShippingCost'])->name('destinations.shipping-costs');

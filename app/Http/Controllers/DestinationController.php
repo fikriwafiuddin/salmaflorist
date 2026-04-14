@@ -15,6 +15,12 @@ class DestinationController extends Controller
         $this->destinationService = $destinationService;
     }
 
+    public function getProvinces()
+    {
+        $provinces = $this->destinationService->getProvinces();
+        return response()->json($provinces);
+    }
+
     public function getCities($provinceId)
     {
         $cities = $this->destinationService->getCities($provinceId);
