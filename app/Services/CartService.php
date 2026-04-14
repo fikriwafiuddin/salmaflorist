@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\CustomItemDetail;
+use App\Models\CustomItemMaterial;
 use App\Models\Product;
 
 class CartService
@@ -63,41 +65,61 @@ class CartService
     public function getByUserId(int $userId)
     {
         return Cart::firstOrCreate(['user_id' => $userId])
-            ->load('items.product');
+            ->load('items.product', 'items.customDetail.materials.material');
     }
 
     public function addToCart(array $data)
     {
-        $cart = $this->getByUserId($data['user_id']);
+        return \DB::transaction(function () use ($data) {
+            $cart = $this->getByUserId($data['user_id']);
 
-        if ($data['is_custom'] == 0) {
-            $cartItem = CartItem::where('cart_id', $cart->id)->where('product_id', $data['product_id'])->first();
+            if ($data['is_custom'] == 0) {
+                $cartItem = CartItem::where('cart_id', $cart->id)
+                    ->where('product_id', $data['product_id'])
+                    ->first();
 
-            if ($cartItem) {
-                return $cartItem->update([
-                    'quantity' => $cartItem->quantity + $data['quantity'],
+                if ($cartItem) {
+                    return $cartItem->update([
+                        'quantity' => $cartItem->quantity + $data['quantity'],
+                    ]);
+                }
+
+                Product::findOrFail($data['product_id']);
+
+                return CartItem::create([
+                    'cart_id' => $cart->id,
+                    'product_id' => $data['product_id'],
+                    'quantity' => $data['quantity'],
+                    'is_custom' => $data['is_custom'],
                 ]);
             }
-        }
 
-        if ($data['is_custom'] == 1) {
-            return CartItem::create([
-                'cart_id' => $cart->id,
-                'is_custom' => $data['is_custom'],
-                'custom_name' => $data['custom_name'],
-                'custom_description' => $data['custom_description'],
-                'quantity' => $data['quantity'],
-                'unit_price' => $data['unit_price'],
-            ]);
-        }
+            if ($data['is_custom'] == 1) {
+                $cartItem = CartItem::create([
+                    'cart_id' => $cart->id,
+                    'is_custom' => $data['is_custom'],
+                    'quantity' => $data['quantity'],
+                ]);
 
-        Product::findOrFail($data['product_id']);
+                $customDetail = CustomItemDetail::create([
+                    'cart_item_id' => $cartItem->id,
+                    'name' => $data['name'],
+                    'description' => $data['description'],
+                    'service_fee' => 50000,
+                ]);
 
-        return CartItem::create([
-            'cart_id' => $cart->id,
-            'product_id' => $data['product_id'],
-            'quantity' => $data['quantity'],
-            'is_custom' => $data['is_custom'],
-        ]);
+                if (isset($data['materials']) && is_array($data['materials'])) {
+                    foreach ($data['materials'] as $mat) {
+                        CustomItemMaterial::create([
+                            'custom_item_detail_id' => $customDetail->id,
+                            'material_id' => $mat['material_id'],
+                            'quantity' => $mat['quantity'],
+                        ]);
+                    }
+                }
+
+                return $cartItem;
+            }
+        });
     }
 }

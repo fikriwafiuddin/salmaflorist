@@ -144,10 +144,22 @@ export interface CartItem {
     product_id: number | null;
     is_custom: 0 | 1;
     quantity: number;
-    unit_price: number;
     product: Product | null;
-    custom_name?: string | null;
-    custom_description?: string | null;
+    name?: string | null;
+    description?: string | null;
+    custom_detail?: {
+        id: number;
+        name: string;
+        description: string;
+        service_fee: number;
+        materials?: {
+            id: number;
+            custom_item_detail_id: number;
+            material_id: number;
+            quantity: number;
+            material: Material;
+        }[];
+    };
 }
 
 export interface Province {

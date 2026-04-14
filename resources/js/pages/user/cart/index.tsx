@@ -1,7 +1,7 @@
 import FormCustomItem from '@/components/shared/FormCustomItem';
 import { Button } from '@/components/ui/button';
 import { destroy } from '@/routes/user/cart';
-import { Cart } from '@/types';
+import { Cart, Material } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -26,9 +26,10 @@ function formatRupiah(amount: number) {
 
 type CartPageProps = {
     cart: Cart;
+    materials: Material[];
 };
 
-export default function CartPage({ cart }: CartPageProps) {
+export default function CartPage({ cart, materials }: CartPageProps) {
     const [localQuantities, setLocalQuantities] = useState<
         Record<number, number>
     >(Object.fromEntries(cart.items.map((item) => [item.id, item.quantity])));
@@ -71,7 +72,15 @@ export default function CartPage({ cart }: CartPageProps) {
     };
 
     const totalAmount = cart.items.reduce((total, item) => {
-        const price = item.product?.price || item.unit_price || 0;
+        const price =
+            item.product?.price ||
+            (item.custom_detail?.service_fee || 0) +
+                (item.custom_detail?.materials?.reduce(
+                    (acc, material) =>
+                        acc + material.material.price * material.quantity,
+                    0,
+                ) || 0) ||
+            0;
         return total + price * item.quantity;
     }, 0);
 
@@ -118,15 +127,18 @@ export default function CartPage({ cart }: CartPageProps) {
                             Keranjang Belanja
                         </h1>
 
-                        {/* <FormCustomItem type="ADD">
+                        <FormCustomItem
+                            type="ADD"
+                            availableMaterials={materials}
+                        >
                             <Button
                                 variant="outline"
-                                className="gap-2 border-primary text-primary hover:bg-primary/5"
+                                className="gap-2 rounded-xl border-primary text-primary transition-all hover:scale-105 hover:bg-primary/5 active:scale-95"
                             >
                                 <PlusCircle className="h-4 w-4" />
                                 Tambah Item Custom
                             </Button>
-                        </FormCustomItem> */}
+                        </FormCustomItem>
                     </div>
 
                     {cart.items.length === 0 ? (
@@ -143,17 +155,23 @@ export default function CartPage({ cart }: CartPageProps) {
                                 atau buat pesanan kustom!
                             </p>
                             <div className="flex flex-wrap justify-center gap-4">
-                                <Button asChild>
+                                <Button asChild className="rounded-xl">
                                     <Link href="/catalog">
                                         Lihat Katalog{' '}
                                         <ArrowRight className="ml-2 h-4 w-4" />
                                     </Link>
                                 </Button>
-                                {/* <FormCustomItem type="ADD">
-                                    <Button variant="secondary">
+                                <FormCustomItem
+                                    type="ADD"
+                                    availableMaterials={materials}
+                                >
+                                    <Button
+                                        variant="secondary"
+                                        className="rounded-xl"
+                                    >
                                         Buat Pesanan Kustom
                                     </Button>
-                                </FormCustomItem> */}
+                                </FormCustomItem>
                             </div>
                         </div>
                     ) : (
@@ -163,12 +181,17 @@ export default function CartPage({ cart }: CartPageProps) {
                                 {cart.items.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="flex gap-4 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                                        className="group relative flex gap-4 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm transition-all hover:shadow-md"
                                     >
                                         {/* Product image / Custom Icon */}
-                                        <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-pink-50">
+                                        <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-pink-50 transition-transform group-hover:scale-105">
                                             {item.is_custom ? (
-                                                <PlusCircle className="h-8 w-8 text-primary/40" />
+                                                <div className="flex flex-col items-center">
+                                                    <PlusCircle className="h-8 w-8 text-primary/40" />
+                                                    <span className="mt-1 text-[10px] font-bold tracking-wider text-primary/40 uppercase">
+                                                        Custom
+                                                    </span>
+                                                </div>
                                             ) : (
                                                 <img
                                                     src={`/storage/${item.product?.image}`}
@@ -188,7 +211,7 @@ export default function CartPage({ cart }: CartPageProps) {
                                         <div className="flex flex-1 flex-col justify-between">
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <span className="mb-0.5 inline-block rounded-full bg-pink-50 px-2 py-0.5 text-xs text-primary">
+                                                    <span className="mb-0.5 inline-block rounded-full bg-pink-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-primary uppercase">
                                                         {item.is_custom
                                                             ? 'Custom Order'
                                                             : item.product
@@ -196,21 +219,55 @@ export default function CartPage({ cart }: CartPageProps) {
                                                                   ?.name ||
                                                               'Produk'}
                                                     </span>
-                                                    <h3 className="font-semibold text-foreground">
+                                                    <h3 className="font-playfair-display text-lg font-bold text-foreground">
                                                         {item.is_custom
-                                                            ? item.custom_name
+                                                            ? item.custom_detail
+                                                                  ?.name
                                                             : item.product
                                                                   ?.name}
                                                     </h3>
-                                                    {item.is_custom == 1 &&
-                                                        item.custom_description && (
-                                                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground italic">
+                                                    {item.is_custom == 1 && (
+                                                        <div className="mt-1 space-y-1">
+                                                            <p className="flex max-w-[200px] items-center gap-1 truncate text-xs text-muted-foreground italic">
                                                                 <InfoIcon className="h-3 w-3" />{' '}
                                                                 {
-                                                                    item.custom_description
+                                                                    item
+                                                                        .custom_detail
+                                                                        ?.description
                                                                 }
                                                             </p>
-                                                        )}
+                                                            {item.custom_detail
+                                                                ?.materials && (
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {item.custom_detail.materials.map(
+                                                                        (
+                                                                            m,
+                                                                            idx,
+                                                                        ) => (
+                                                                            <span
+                                                                                key={
+                                                                                    idx
+                                                                                }
+                                                                                className="rounded-md border border-pink-100 bg-pink-50 px-1.5 py-0.5 text-[9px] text-primary"
+                                                                            >
+                                                                                {
+                                                                                    m
+                                                                                        .material
+                                                                                        .name
+                                                                                }{' '}
+                                                                                (
+                                                                                {
+                                                                                    m.quantity
+                                                                                }
+
+                                                                                )
+                                                                            </span>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex gap-1">
                                                     {item.is_custom == 1 && (
@@ -218,9 +275,12 @@ export default function CartPage({ cart }: CartPageProps) {
                                                             type="UPDATE"
                                                             id={item.id}
                                                             customItem={item}
+                                                            availableMaterials={
+                                                                materials
+                                                            }
                                                         >
                                                             <button
-                                                                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-pink-50 hover:text-primary"
+                                                                className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-pink-50 hover:text-primary active:scale-90"
                                                                 aria-label="Edit item kustom"
                                                             >
                                                                 <Edit2 className="h-4 w-4" />
@@ -231,7 +291,7 @@ export default function CartPage({ cart }: CartPageProps) {
                                                         onClick={() =>
                                                             deleteItem(item.id)
                                                         }
-                                                        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
+                                                        className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-red-50 hover:text-red-500 active:scale-90"
                                                         aria-label="Hapus produk"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -243,7 +303,21 @@ export default function CartPage({ cart }: CartPageProps) {
                                                 <span className="text-lg font-bold text-primary">
                                                     {formatRupiah(
                                                         item?.product?.price ||
-                                                            item.unit_price,
+                                                            (item.custom_detail
+                                                                ?.service_fee ||
+                                                                0) +
+                                                                (item.custom_detail?.materials?.reduce(
+                                                                    (
+                                                                        acc,
+                                                                        material,
+                                                                    ) =>
+                                                                        acc +
+                                                                        material
+                                                                            .material
+                                                                            .price *
+                                                                            material.quantity,
+                                                                    0,
+                                                                ) || 0),
                                                     )}
                                                 </span>
 
@@ -260,11 +334,11 @@ export default function CartPage({ cart }: CartPageProps) {
                                                                 item.id,
                                                             )
                                                         }
-                                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
+                                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-all hover:bg-primary hover:text-white active:scale-90"
                                                     >
                                                         <Minus className="h-3.5 w-3.5" />
                                                     </button>
-                                                    <span className="w-6 text-center text-sm font-semibold">
+                                                    <span className="w-6 text-center text-sm font-bold">
                                                         {localQuantities[
                                                             item.id
                                                         ] || item.quantity}
@@ -280,7 +354,7 @@ export default function CartPage({ cart }: CartPageProps) {
                                                                 item.id,
                                                             )
                                                         }
-                                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary hover:text-white"
+                                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-primary transition-all hover:bg-primary hover:text-white active:scale-90"
                                                     >
                                                         <Plus className="h-3.5 w-3.5" />
                                                     </button>
@@ -292,7 +366,7 @@ export default function CartPage({ cart }: CartPageProps) {
 
                                 <a
                                     href="/catalog"
-                                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
+                                    className="inline-flex items-center gap-2 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
                                 >
                                     <ArrowLeft className="h-4 w-4" />
                                     Lanjut belanja
@@ -301,7 +375,7 @@ export default function CartPage({ cart }: CartPageProps) {
 
                             {/* ── Order Summary ────────────────────────── */}
                             <div className="h-fit rounded-2xl border border-pink-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
-                                <h2 className="mb-5 font-playfair-display text-lg font-bold">
+                                <h2 className="mb-5 font-playfair-display text-xl font-bold text-foreground">
                                     Ringkasan Pesanan
                                 </h2>
 
@@ -313,14 +387,28 @@ export default function CartPage({ cart }: CartPageProps) {
                                         >
                                             <span className="flex-1 truncate pr-2">
                                                 {item.is_custom
-                                                    ? item.custom_name
+                                                    ? item.custom_detail?.name
                                                     : item.product?.name}{' '}
                                                 × {item.quantity}
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
                                                     (item.product?.price ||
-                                                        item.unit_price ||
+                                                        (item.custom_detail
+                                                            ?.service_fee ||
+                                                            0) +
+                                                            (item.custom_detail?.materials?.reduce(
+                                                                (
+                                                                    acc,
+                                                                    material,
+                                                                ) =>
+                                                                    acc +
+                                                                    material
+                                                                        .material
+                                                                        .price *
+                                                                        material.quantity,
+                                                                0,
+                                                            ) || 0) ||
                                                         0) * item.quantity,
                                                 )}
                                             </span>
@@ -328,11 +416,11 @@ export default function CartPage({ cart }: CartPageProps) {
                                     ))}
                                 </div>
 
-                                <div className="my-4 border-t border-dashed border-pink-100" />
+                                <div className="my-5 border-t border-dashed border-pink-100" />
 
-                                <div className="flex justify-between font-semibold">
-                                    <span>Subtotal</span>
-                                    <span className="text-lg text-primary">
+                                <div className="flex justify-between font-bold">
+                                    <span className="text-lg">Subtotal</span>
+                                    <span className="text-xl text-primary">
                                         {formatRupiah(totalAmount)}
                                     </span>
                                 </div>
@@ -341,19 +429,15 @@ export default function CartPage({ cart }: CartPageProps) {
                                 </p>
 
                                 <Button
-                                    className="mt-6 w-full gap-2"
+                                    className="mt-8 w-full gap-2 rounded-xl py-6 text-lg font-bold shadow-lg shadow-primary/25 transition-all hover:scale-[1.02]"
                                     size="lg"
                                     asChild
                                 >
                                     <Link href="/checkout">
                                         Lanjut ke Checkout{' '}
-                                        <ArrowRight className="h-4 w-4" />
+                                        <ArrowRight className="h-5 w-5" />
                                     </Link>
                                 </Button>
-
-                                <p className="mt-3 text-center text-xs text-muted-foreground">
-                                    🔒 Pembayaran aman &amp; terenkripsi
-                                </p>
                             </div>
                         </div>
                     )}

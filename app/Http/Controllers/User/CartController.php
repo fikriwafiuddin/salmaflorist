@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Services\CartService;
+use App\Models\Material;
 
 class CartController extends Controller
 {
@@ -29,6 +30,7 @@ class CartController extends Controller
         
         return Inertia::render('user/cart/index', [
             'cart' => $cart,
+            'materials' => Material::all(),
         ]);
     }
 

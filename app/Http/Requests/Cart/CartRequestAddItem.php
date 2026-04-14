@@ -25,9 +25,11 @@ class CartRequestAddItem extends FormRequest
             'product_id' => 'nullable|integer|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'is_custom' => 'required',
-            'custom_name' => 'nullable|string|max:25',
-            'custom_description' => 'nullable|string|max:300',
-            'unit_price' => 'nullable|integer|min:1',
+            'name' => 'nullable|string|max:25',
+            'description' => 'nullable|string|max:300',
+            'materials' => 'nullable|array',
+            'materials.*.material_id' => 'required|integer|exists:materials,id',
+            'materials.*.quantity' => 'required|integer|min:1',
         ];
     }
 
@@ -35,16 +37,16 @@ class CartRequestAddItem extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->is_custom == 1) {
-                if (empty($this->custom_name)) {
-                    $validator->errors()->add('custom_name', 'Nama custom wajib diisi');
+                if (empty($this->name)) {
+                    $validator->errors()->add('name', 'Nama custom wajib diisi');
                 }
 
-                if (empty($this->custom_description)) {
-                    $validator->errors()->add('custom_description', 'Deskripsi custom wajib diisi');
+                if (empty($this->description)) {
+                    $validator->errors()->add('description', 'Deskripsi custom wajib diisi');
                 }
 
-                if (empty($this->unit_price)) {
-                    $validator->errors()->add('unit_price', 'Harga custom wajib diisi');
+                if (empty($this->materials)) {
+                    $validator->errors()->add('materials', 'Bahan custom wajib dipilih setidaknya satu');
                 }
             }
 
