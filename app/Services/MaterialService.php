@@ -128,7 +128,27 @@ class MaterialService
         foreach ($materials as $item) {
             $available = $this->getAvailableStock($item['id']);
             if ($available < $item['quantity']) {
-                $missing[] = $item['name'] . " (Butuh: {$item['quantity']}, Tersedia: {$available})";
+                $detail = "Bahan '{$item['name']}' tidak mencukupi.";
+                
+                if (isset($item['sources']) && !empty($item['sources'])) {
+                    // Group sources by product_name to consolidate quantities
+                    $groupedSources = [];
+                    foreach ($item['sources'] as $source) {
+                        $pName = $source['product_name'];
+                        $groupedSources[$pName] = ($groupedSources[$pName] ?? 0) + $source['quantity'];
+                    }
+                    
+                    $sourceStr = [];
+                    foreach ($groupedSources as $pName => $qty) {
+                        $sourceStr[] = "{$pName} butuh {$qty}";
+                    }
+                    
+                    $detail .= " Dibutuhkan total {$item['quantity']} (" . implode(', ', $sourceStr) . "), tersedia {$available}. Kurang " . ($item['quantity'] - $available) . ".";
+                } else {
+                    $detail .= " Butuh: {$item['quantity']}, Tersedia: {$available}. Kurang " . ($item['quantity'] - $available) . ".";
+                }
+                
+                $missing[] = $detail;
             }
         }
 

@@ -155,7 +155,11 @@ function OrderShowPage({ order }: OrderShowPageProps) {
                                     <p className="text-muted-foreground">
                                         Alamat:
                                     </p>
-                                    <p>{order.address}</p>
+                                    <p>
+                                        {typeof order.address === 'string'
+                                            ? order.address
+                                            : `${order.address?.address_detail}${order.address?.district?.name ? `, ${order.address.district.name}` : ''}${order.address?.city?.name ? `, ${order.address.city.name}` : ''}${order.address?.province?.name ? `, ${order.address.province.name}` : ''}`}
+                                    </p>
                                     <p className="text-muted-foreground">
                                         Pengiriman:
                                     </p>

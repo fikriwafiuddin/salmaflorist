@@ -60,9 +60,12 @@ class OrderController extends Controller
      */
     public function store(OrderRequestCreate $request)
     {
-        $order = $this->orderService->create($request->validated());
-
-        return to_route('orders.show', ['order' => $order->id]);
+        try {
+            $order = $this->orderService->create($request->validated());
+            return to_route('orders.show', ['order' => $order->id]);
+        } catch (\App\Exceptions\InsufficientStockException $e) {
+            return back()->withErrors(['items' => $e->getMessage()])->withInput();
+        }
     }
 
     /**

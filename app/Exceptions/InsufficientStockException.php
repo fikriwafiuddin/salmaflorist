@@ -11,7 +11,7 @@ class InsufficientStockException extends Exception
     public function __construct(array $missingMaterials)
     {
         $this->missingMaterials = $missingMaterials;
-        $message = "Bahan berikut tidak mencukupi atau sudah kadaluarsa: " . implode(', ', $missingMaterials);
+        $message = "Bahan berikut tidak mencukupi atau sudah kadaluarsa:\n- " . implode("\n- ", $missingMaterials);
         parent::__construct($message, 422);
     }
 

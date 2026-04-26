@@ -51,7 +51,12 @@ export interface Order extends TimeStamp {
     id: number;
     customer_name: string;
     whatsapp_number: string;
-    address: string;
+    address: string | { 
+        address_detail: string;
+        province?: Province;
+        city?: City;
+        district?: District;
+    };
     schedule: Date;
     total_amount: number;
     is_paid: boolean;

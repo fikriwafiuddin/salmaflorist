@@ -42,10 +42,15 @@ class OrderService
                             $requiredMaterials[$materialId] = [
                                 'id' => $materialId,
                                 'quantity' => 0,
-                                'name' => $mat->name
+                                'name' => $mat->name,
+                                'sources' => []
                             ];
                         }
                         $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                        $requiredMaterials[$materialId]['sources'][] = [
+                            'product_name' => $item->product->name,
+                            'quantity' => $quantityNeeded
+                        ];
                     }
                 } else {
                     $customDetail = $item->customDetail;
@@ -57,10 +62,15 @@ class OrderService
                                 $requiredMaterials[$materialId] = [
                                     'id' => $materialId,
                                     'quantity' => 0,
-                                    'name' => $customMat->material->name ?? 'Unknown'
+                                    'name' => $customMat->material->name ?? 'Unknown',
+                                    'sources' => []
                                 ];
                             }
                             $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                            $requiredMaterials[$materialId]['sources'][] = [
+                                'product_name' => "Custom: {$customDetail->name}",
+                                'quantity' => $quantityNeeded
+                            ];
                         }
                     }
                 }
@@ -192,6 +202,39 @@ class OrderService
     public function create (array $data)
     {
         return DB::transaction(function () use ($data) {
+            // --- 1. VALIDASI STOK (PRE-CHECK) ---
+            if ($data['is_paid']) {
+                $requiredMaterials = [];
+                foreach ($data['items'] as $item) {
+                    if (!$item['is_custom']) {
+                        $product = Product::with('materials')->findOrFail($item['product']['id']);
+                        foreach ($product->materials as $mat) {
+                            $materialId = $mat->id;
+                            $quantityNeeded = $mat->pivot->quantity * $item['quantity'];
+                            
+                            if (!isset($requiredMaterials[$materialId])) {
+                                $requiredMaterials[$materialId] = [
+                                    'id' => $materialId,
+                                    'quantity' => 0,
+                                    'name' => $mat->name,
+                                    'sources' => []
+                                ];
+                            }
+                            $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                            $requiredMaterials[$materialId]['sources'][] = [
+                                'product_name' => $product->name,
+                                'quantity' => $quantityNeeded
+                            ];
+                        }
+                    }
+                }
+
+                if (!empty($requiredMaterials)) {
+                    $materialService = app(MaterialService::class);
+                    $materialService->checkStockAvailability($requiredMaterials);
+                }
+            }
+
             $totalAmount = 0;
 
             $schedule = Carbon::parse($data['schedule'])
@@ -206,6 +249,7 @@ class OrderService
             ]);
 
             $order = Order::create([
+                'invoice_number'  => $this->generateInvoiceNumber(),
                 'address_id'      => $address->id,
                 'status'          => "process",
                 'is_paid'         => $data['is_paid'],
@@ -259,12 +303,13 @@ class OrderService
                 $this->deductMaterialsForOrder($order);
 
                 CashTransaction::create([
-                    'order_id' => $order->id,
-                    'type' => 'income',
-                    'category' => 'Pesanan',
-                    'amount' => $totalAmount,
+                    'type'             => 'income',
+                    'category'         => 'order',
+                    'payment_method'   => 'cash',
+                    'amount'           => $totalAmount,
                     'transaction_date' => now(),
-                    'description' => "Pembayaran pesanan dari {$data['customer_name']}"
+                    'notes'            => "Pembayaran pesanan dari {$data['customer_name']} (Invoice: {$order->invoice_number})",
+                    'created_by'       => auth()->id(),
                 ]);
             }
 
@@ -303,17 +348,21 @@ class OrderService
                 $this->deductMaterialsForOrder($order);
                 
                 CashTransaction::create([
-                    'order_id' => $order->id,
-                    'type' => 'income',
-                    'category' => 'Pesanan',
-                    'amount' => $order->total_amount,
+                    'type'             => 'income',
+                    'category'         => 'order',
+                    'payment_method'   => 'cash',
+                    'amount'           => $order->total_amount,
                     'transaction_date' => now(),
-                    'description' => "Pembayaran pesanan dari {$order->customer_name}"
+                    'notes'            => "Pembayaran pesanan dari {$order->address->customer_name} (Invoice: {$order->invoice_number})",
+                    'created_by'       => auth()->id(),
                 ]);
             }
             elseif ($wasPaid && !$isPaid) {
                 $order->update(['paid_at' => null, 'is_paid' => false]);
-                CashTransaction::where('order_id', $order->id)->delete();
+                CashTransaction::where('type', 'income')
+                    ->where('category', 'order')
+                    ->where('notes', 'like', "%(Invoice: {$order->invoice_number})%")
+                    ->delete();
             }
 
             return $order;
@@ -427,7 +476,7 @@ class OrderService
     }
 
     public function getById (int $id) {
-        $order = Order::select()->with(['orderItems.product'])->findOrFail($id);
+        $order = Order::select()->with(['orderItems.product', 'address.province', 'address.city', 'address.district'])->findOrFail($id);
 
         return $order;
     }

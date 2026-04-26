@@ -58,10 +58,12 @@ function FormOrder({ onChangeMode }: FormOrderProps) {
             </Button>
 
             {errors.items && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="text-destructive">
                     <CheckCircleIcon />
-                    <AlertTitle>Success</AlertTitle>
-                    <AlertDescription>{errors.items}</AlertDescription>
+                    <AlertTitle>Pesanan Gagal</AlertTitle>
+                    <AlertDescription className="whitespace-pre-line">
+                        <span className="text-destructive">{errors.items}</span>
+                    </AlertDescription>
                 </Alert>
             )}
 
