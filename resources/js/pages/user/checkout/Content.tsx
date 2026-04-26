@@ -194,6 +194,7 @@ export default function ContentCheckoutPage({
                 });
             }
         } catch (error) {
+            console.log(error);
             toast.error(
                 (error as AxiosError<{ message: string }>)?.response?.data
                     ?.message || 'Terjadi kesalahan saat membuat pesanan',

@@ -7,7 +7,13 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\CashTransaction;
 use App\Models\Address;
+use App\Models\Shipment;
 use App\Models\CourierService;
+use App\Models\CustomItemDetail;
+use App\Models\Province;
+use App\Models\City;
+use App\Models\District;
+use App\Models\OrderCounter;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +22,7 @@ class OrderService
     public function createFromUser(array $data, int $userId)
     {
         return DB::transaction(function () use ($data, $userId) {
-            // 1. Get Cart
+            $materialService = app(MaterialService::class);
             $cartService = app(CartService::class);
             $cart = $cartService->getByUserId($userId);
 
@@ -24,44 +30,71 @@ class OrderService
                 throw new \Exception('Keranjang kosong');
             }
 
-            $totalAmount = 0;
+            // --- 1. VALIDASI STOK (PRE-CHECK) ---
+            $requiredMaterials = [];
+            foreach ($cart->items as $item) {
+                if (!$item->is_custom) {
+                    $mats = $item->product->materials;
+                    foreach ($mats as $mat) {
+                        $materialId = $mat->id;
+                        $quantityNeeded = $mat->pivot->quantity * $item->quantity;
+                        if (!isset($requiredMaterials[$materialId])) {
+                            $requiredMaterials[$materialId] = [
+                                'id' => $materialId,
+                                'quantity' => 0,
+                                'name' => $mat->name
+                            ];
+                        }
+                        $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                    }
+                } else {
+                    $customDetail = $item->customDetail;
+                    if ($customDetail) {
+                        foreach ($customDetail->materials as $customMat) {
+                            $materialId = $customMat->material_id;
+                            $quantityNeeded = $customMat->quantity * $item->quantity;
+                            if (!isset($requiredMaterials[$materialId])) {
+                                $requiredMaterials[$materialId] = [
+                                    'id' => $materialId,
+                                    'quantity' => 0,
+                                    'name' => $customMat->material->name ?? 'Unknown'
+                                ];
+                            }
+                            $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                        }
+                    }
+                }
+            }
 
-            // 2. Handle Shipping (if delivery)
+            if (!empty($requiredMaterials)) {
+                $materialService->checkStockAvailability($requiredMaterials);
+            }
+
+            // --- 2. HANDLE ADDRESS & SHIPPING ---
             $addressId = null;
             $courierServiceId = null;
             $shippingCost = 0;
 
             if ($data['shipping_method'] === 'delivery') {
-                // Fetch location names from IDs
                 $destinationService = app(DestinationService::class);
                 
-                // Get name for province, city, district
-                $provinces = $destinationService->getProvinces();
-                $province = collect($provinces)->firstWhere('id', $data['address']['province_id']);
-                $provinceName = $province['name'] ?? '';
-
-                $cities = $destinationService->getCities($data['address']['province_id']);
-                $city = collect($cities)->firstWhere('id', $data['address']['city_id']);
-                $cityName = $city['name'] ?? '';
-
-                $districts = $destinationService->getDistricts($data['address']['city_id']);
-                $district = collect($districts)->firstWhere('id', $data['address']['district_id']);
-                $districtName = $district['name'] ?? '';
+                $province = \App\Models\Province::find($data['address']['province_id']);
+                $city = \App\Models\City::find($data['address']['city_id']);
+                $district = \App\Models\District::find($data['address']['district_id']);
 
                 $address = Address::create([
                     'customer_name' => $data['address']['customer_name'],
                     'whatsapp_number' => $data['address']['whatsapp_number'],
                     'address_detail' => $data['address']['address_detail'],
                     'province_id' => $data['address']['province_id'],
-                    'province_name' => $provinceName,
+                    'province_name' => $province->name ?? '',
                     'city_id' => $data['address']['city_id'],
-                    'city_name' => $cityName,
+                    'city_name' => $city->name ?? '',
                     'district_id' => $data['address']['district_id'],
-                    'district_name' => $districtName,
+                    'district_name' => $district->name ?? '',
                 ]);
                 $addressId = $address->id;
 
-                // Validate shipping cost
                 $costs = $destinationService->getShippingCost([
                     'destination' => $data['address']['district_id'],
                     'courier' => $data['courier']['code']
@@ -73,56 +106,84 @@ class OrderService
                     throw new \Exception('Layanan pengiriman tidak valid');
                 }
 
-                $courierService = CourierService::create([
-                    'name' => $selectedCost['name'],
-                    'code' => $selectedCost['code'],
-                    'service' => $selectedCost['service'],
-                    'description' => $selectedCost['description'],
-                    'cost' => $selectedCost['cost'],
-                    'etd' => $selectedCost['etd'],
-                ]);
-                $courierServiceId = $courierService->id;
                 $shippingCost = $selectedCost['cost'];
+                $selectedShippingData = [
+                    'courier_name' => $selectedCost['name'],
+                    'courier_code' => $selectedCost['code'],
+                    'courier_service' => $selectedCost['service'],
+                    'etd' => $selectedCost['etd'],
+                ];
             }
 
-            // 3. Create Order
+            // --- 3. CREATE ORDER ---
             $order = Order::create([
                 'user_id' => $userId,
+                'invoice_number' => $this->generateInvoiceNumber(),
                 'status' => 'pending',
                 'is_paid' => false,
                 'shipping_method' => $data['shipping_method'],
+                'order_source' => 'web',
                 'address_id' => $addressId,
-                'courier_service_id' => $courierServiceId,
                 'shipping_cost' => $shippingCost,
-                'total_amount' => 0, // temporary
+                'total_amount' => 0, 
                 'notes' => $data['notes'] ?? null,
-                'schedule' => Carbon::now('Asia/Jakarta')->addDays(1), // Default schedule
+                'schedule' => Carbon::now('Asia/Jakarta')->addDays(1), 
             ]);
 
-            // 4. Move items from cart to order
+            if ($data['shipping_method'] === 'delivery' && isset($selectedShippingData)) {
+                Shipment::create(array_merge($selectedShippingData, [
+                    'order_id' => $order->id,
+                    'tracking_number' => null, // Will be filled later
+                ]));
+            }
+
+            $totalAmount = 0;
+
+            // --- 4. MOVE ITEMS & CUSTOM DETAILS ---
             foreach ($cart->items as $item) {
-                $unitPrice = $item->is_custom ? $item->unit_price : ($item->product->price ?? 0);
+                $unitPrice = !$item->is_custom 
+                    ? ($item->product->price ?? 0)
+                    : ($item->customDetail->service_fee ?? 0);
+
                 $subtotal = $unitPrice * $item->quantity;
                 $totalAmount += $subtotal;
 
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item->product_id,
                     'is_custom' => $item->is_custom,
-                    'custom_name' => $item->is_custom ? $item->custom_name : ($item->product->name ?? 'Unknown'),
-                    'custom_description' => $item->custom_description,
                     'quantity' => $item->quantity,
                     'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ]);
+
+                if ($item->is_custom && $item->customDetail) {
+                    $newDetail = $item->customDetail->replicate();
+                    $newDetail->cart_item_id = null;
+                    $newDetail->order_item_id = $orderItem->id;
+                    $newDetail->save();
+
+                    // Copy materials
+                    foreach ($item->customDetail->materials as $mat) {
+                        $newMat = $mat->replicate();
+                        $newMat->custom_item_detail_id = $newDetail->id;
+                        $newMat->save();
+                    }
+                }
             }
 
             $order->update([
                 'total_amount' => $totalAmount + $shippingCost,
             ]);
 
-            // 5. Clear Cart
-            $cart->items()->delete();
+            // --- 5. CLEAR CART ---
+            $cart->items()->each(function($item) {
+                if ($item->customDetail) {
+                    $item->customDetail->materials()->delete();
+                    $item->customDetail->delete();
+                }
+                $item->delete();
+            });
 
             return $order;
         });
@@ -150,6 +211,7 @@ class OrderService
                 'is_paid'         => $data['is_paid'],
                 'paid_at'         => $data['is_paid'] ? now() : null,
                 'shipping_method' => $data['shipping_method'],
+                'order_source'    => 'store',
                 'schedule'        => $schedule,
                 'total_amount'    => 0,
                 'notes'           => $data['notes'] ?? null,
@@ -170,16 +232,23 @@ class OrderService
 
                 $totalAmount += $subtotal;
 
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id'           => $order->id,
                     'product_id'         => $item['product']['id'] ?? null,
                     'is_custom'          => $item['is_custom'],
-                    'custom_name'        => $item['custom_name'],
-                    'custom_description' => $item['custom_description'],
                     'quantity'           => $item['quantity'],
                     'unit_price'         => $unitPrice,
                     'subtotal'           => $subtotal,
                 ]);
+
+                if ($item['is_custom']) {
+                    CustomItemDetail::create([
+                        'order_item_id' => $orderItem->id,
+                        'name'          => $item['custom_name'],
+                        'description'   => $item['custom_description'],
+                        'service_fee'   => $unitPrice, // Assuming unit price is the service fee for admin entries
+                    ]);
+                }
             }
 
             $order->update([
@@ -187,6 +256,8 @@ class OrderService
             ]);
 
             if ($data['is_paid']) {
+                $this->deductMaterialsForOrder($order);
+
                 CashTransaction::create([
                     'order_id' => $order->id,
                     'type' => 'income',
@@ -213,11 +284,11 @@ class OrderService
             $data['schedule'] = $schedule;
             
             $wasPaid = $order->is_paid;
-            $isPaid = $data['is_paid'];
+            $isPaid = isset($data['is_paid']) ? (bool)$data['is_paid'] : $wasPaid;
             
+            // For update, we might only update the main order details
             $order->update($data);
 
-            // Update associated address if it exists, or create one
             if ($order->address) {
                 $order->address->update([
                     'customer_name' => $data['customer_name'] ?? $order->address->customer_name,
@@ -227,8 +298,9 @@ class OrderService
             }
 
             if (!$wasPaid && $isPaid) {
-                // Update paid_at too
-                $order->update(['paid_at' => now()]);
+                $order->update(['paid_at' => now(), 'is_paid' => true]);
+                
+                $this->deductMaterialsForOrder($order);
                 
                 CashTransaction::create([
                     'order_id' => $order->id,
@@ -240,12 +312,49 @@ class OrderService
                 ]);
             }
             elseif ($wasPaid && !$isPaid) {
-                $order->update(['paid_at' => null]);
+                $order->update(['paid_at' => null, 'is_paid' => false]);
                 CashTransaction::where('order_id', $order->id)->delete();
             }
 
             return $order;
         });
+    }
+
+    /**
+     * Kurangi stok bahan untuk seluruh isi pesanan.
+     */
+    public function deductMaterialsForOrder(Order $order)
+    {
+        $materialService = app(MaterialService::class);
+        $order->load(['orderItems.product.materials', 'orderItems.customDetail.materials.material']);
+
+        foreach ($order->orderItems as $item) {
+            if (!$item->is_custom) {
+                // Regular Product
+                if ($item->product) {
+                    foreach ($item->product->materials as $mat) {
+                        $quantityToDeduct = $mat->pivot->quantity * $item->quantity;
+                        $materialService->deductStockFEFO(
+                            $mat->id, 
+                            $quantityToDeduct, 
+                            "Pesanan #{$order->id} (Produk: {$item->product->name})"
+                        );
+                    }
+                }
+            } else {
+                // Custom Item
+                if ($item->customDetail) {
+                    foreach ($item->customDetail->materials as $customMat) {
+                        $quantityToDeduct = $customMat->quantity * $item->quantity;
+                        $materialService->deductStockFEFO(
+                            $customMat->material_id, 
+                            $quantityToDeduct, 
+                            "Pesanan #{$order->id} (Custom Item: {$item->customDetail->name})"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     public function updateStatus (array $data, int $id)
@@ -672,5 +781,32 @@ class OrderService
         return DB::transaction(function () use ($data, $user) {
 
         });
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        $now = Carbon::now('Asia/Jakarta');
+        $year = $now->year;
+        $month = $now->month;
+
+        $counter = OrderCounter::where('year', $year)
+            ->where('month', $month)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$counter) {
+            $counter = OrderCounter::create([
+                'year' => $year,
+                'month' => $month,
+                'current_count' => 1,
+            ]);
+        } else {
+            $counter->increment('current_count');
+        }
+
+        $formattedYearMonth = $now->format('ym'); // e.g., 2604
+        $formattedCount = str_pad($counter->current_count, 4, '0', STR_PAD_LEFT); // e.g., 0001
+
+        return "SLM-{$formattedYearMonth}-{$formattedCount}";
     }
 }

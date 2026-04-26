@@ -100,4 +100,91 @@ class MaterialService
     {
         return Material::where('stock', '<=', 0)->get();
     }
+
+    /**
+     * Ambil total stok yang tersedia (aktif dan belum kadaluarsa).
+     */
+    public function getAvailableStock(int $materialId): int
+    {
+        return \App\Models\MaterialStock::where('material_id', $materialId)
+            ->where('is_active', true)
+            ->where('remaining_quantity', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('expired_date')
+                    ->orWhere('expired_date', '>', now());
+            })
+            ->sum('remaining_quantity');
+    }
+
+    /**
+     * Cek apakah semua bahan yang diperlukan mencukupi.
+     * @param array $materials format: [['id' => 1, 'quantity' => 2, 'name' => 'Bunga'], ...]
+     * @throws \App\Exceptions\InsufficientStockException
+     */
+    public function checkStockAvailability(array $materials)
+    {
+        $missing = [];
+
+        foreach ($materials as $item) {
+            $available = $this->getAvailableStock($item['id']);
+            if ($available < $item['quantity']) {
+                $missing[] = $item['name'] . " (Butuh: {$item['quantity']}, Tersedia: {$available})";
+            }
+        }
+
+        if (!empty($missing)) {
+            throw new \App\Exceptions\InsufficientStockException($missing);
+        }
+
+        return true;
+    }
+
+    /**
+     * Kurangi stok menggunakan metode FEFO (First Expiring First Out).
+     */
+    public function deductStockFEFO(int $materialId, int $quantity, string $notes = '')
+    {
+        return DB::transaction(function () use ($materialId, $quantity, $notes) {
+            $remainingToDeduct = $quantity;
+
+            // Ambil batch yang aktif, belum kadaluarsa, diurutkan berdasarkan tanggal kadaluarsa terdekat
+            $batches = \App\Models\MaterialStock::where('material_id', $materialId)
+                ->where('is_active', true)
+                ->where('remaining_quantity', '>', 0)
+                ->where(function ($query) {
+                    $query->whereNull('expired_date')
+                        ->orWhere('expired_date', '>', now());
+                })
+                ->orderByRaw('expired_date IS NULL, expired_date ASC') // Null (tidak ada kadaluarsa) ditaruh paling belakang
+                ->get();
+
+            foreach ($batches as $batch) {
+                if ($remainingToDeduct <= 0) break;
+
+                $deductFromThisBatch = min($batch->remaining_quantity, $remainingToDeduct);
+                
+                $batch->decrement('remaining_quantity', $deductFromThisBatch);
+                $remainingToDeduct -= $deductFromThisBatch;
+
+                // Log pengurangan stok
+                \App\Models\MaterialStockLog::create([
+                    'material_id' => $materialId,
+                    'material_stock_id' => $batch->id,
+                    'created_by' => auth()->id(),
+                    'quantity' => $deductFromThisBatch,
+                    'type' => 'out',
+                    'notes' => $notes ?: 'Pengurangan stok untuk pesanan',
+                ]);
+            }
+
+            if ($remainingToDeduct > 0) {
+                throw new \Exception("Stok bahan #{$materialId} tidak mencukupi untuk pengurangan (Kurang: {$remainingToDeduct})");
+            }
+
+            // Update total stok di tabel materials
+            Material::where('id', $materialId)->decrement('stock', $quantity);
+
+            return true;
+        });
+    }
 }

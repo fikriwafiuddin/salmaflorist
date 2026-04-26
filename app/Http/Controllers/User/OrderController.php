@@ -35,7 +35,7 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::where('user_id', Auth::id())
-            ->with(['orderItems.product', 'address', 'courierService'])
+            ->with(['orderItems.product', 'address', 'shipment'])
             ->latest()
             ->get();
 
@@ -65,10 +65,15 @@ class OrderController extends Controller
                 'snap_token' => $snapToken,
                 'order_id' => $order->id
             ]);
+        } catch (\App\Exceptions\InsufficientStockException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal server error'
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
     }

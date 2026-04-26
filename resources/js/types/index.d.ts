@@ -59,6 +59,7 @@ export interface Order extends TimeStamp {
     notes: string | null;
     status: string;
     created_at: Date;
+    shipment?: Shipment;
 }
 
 export interface OrderItem {
@@ -223,4 +224,14 @@ export interface MaterialStockLog extends TimeStamp {
     quantity: number;
     type: 'in' | 'out';
     notes: string | null;
+}
+
+export interface Shipment extends TimeStamp {
+    id: number;
+    order_id: number;
+    tracking_number: string | null;
+    courier_name: string;
+    courier_code: string;
+    courier_service: string;
+    etd: string | null;
 }
