@@ -20,6 +20,9 @@ use App\Http\Controllers\User\OrderController as UserOrderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\MidtransWebhookController;
+
+Route::post('/midtrans/callback', [MidtransWebhookController::class, 'handle'])->name('midtrans.webhook');
 
 // Route::get('/', function () {
 //     return Inertia::render('welcome', [
