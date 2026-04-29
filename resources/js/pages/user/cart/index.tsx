@@ -156,10 +156,10 @@ export default function CartPage({ cart, materials }: CartPageProps) {
                             </p>
                             <div className="flex flex-wrap justify-center gap-4">
                                 <Button asChild className="rounded-xl">
-                                    <Link href="/catalog">
+                                    <a href="/catalog">
                                         Lihat Katalog{' '}
                                         <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Link>
+                                    </a>
                                 </Button>
                                 <FormCustomItem
                                     type="ADD"

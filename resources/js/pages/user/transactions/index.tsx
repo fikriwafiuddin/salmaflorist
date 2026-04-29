@@ -574,7 +574,7 @@ export default function TransactionHistoryPage({
                 {/* ── Top bar ──────────────────────────────────────── */}
                 <header className="sticky top-0 z-30 border-b border-pink-100 bg-white/80 backdrop-blur-md">
                     <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-                        <Link href="/" className="flex items-center gap-2">
+                        <a href="/" className="flex items-center gap-2">
                             <img
                                 src="/logo.png"
                                 alt="Salma Florist"
@@ -588,7 +588,7 @@ export default function TransactionHistoryPage({
                             <span className="font-playfair-display text-lg font-semibold text-primary">
                                 Salma Florist
                             </span>
-                        </Link>
+                        </a>
                         <Link
                             href="/cart"
                             className="rounded-xl border border-pink-100 bg-white px-3 py-1.5 text-sm font-medium text-primary shadow-xs transition-colors hover:bg-pink-50"
@@ -601,9 +601,9 @@ export default function TransactionHistoryPage({
                 <main className="mx-auto max-w-4xl px-4 py-8">
                     {/* Breadcrumb */}
                     <nav className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Link href="/" className="hover:text-primary">
+                        <a href="/" className="hover:text-primary">
                             Beranda
-                        </Link>
+                        </a>
                         <span>/</span>
                         <span className="font-medium text-foreground">
                             Riwayat Transaksi
@@ -655,12 +655,12 @@ export default function TransactionHistoryPage({
                     )}
 
                     <div className="mt-8 flex justify-center">
-                        <Link
+                        <a
                             href="/catalog"
                             className="text-sm text-muted-foreground underline underline-offset-4 hover:text-primary"
                         >
                             Belanja lagi →
-                        </Link>
+                        </a>
                     </div>
                 </main>
             </div>
