@@ -49,14 +49,17 @@ export interface ProductMaterial {
 
 export interface Order extends TimeStamp {
     id: number;
+    invoice_number: string;
     customer_name: string;
     whatsapp_number: string;
-    address: string | { 
-        address_detail: string;
-        province?: Province;
-        city?: City;
-        district?: District;
-    };
+    address:
+        | string
+        | {
+              address_detail: string;
+              province?: Province;
+              city?: City;
+              district?: District;
+          };
     schedule: Date;
     total_amount: number;
     is_paid: boolean;

@@ -38,6 +38,7 @@ interface OrderItem {
 
 interface Transaction {
     id: string;
+    invoice_number: string;
     date: string;
     status: OrderStatus;
     shipping_method: 'delivery' | 'pickup';
@@ -59,6 +60,7 @@ interface OrderItemModel {
 interface OrderModel {
     id: number;
     created_at: string;
+    invoice_number: string;
     status: string;
     shipping_method: 'delivery' | 'pickup';
     courier_service?: { name: string; service: string };
@@ -324,7 +326,7 @@ function TransactionCard({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-foreground">
-                            {tx.id}
+                            {tx.invoice_number}
                         </span>
                         <span
                             className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[tx.status]}`}
@@ -519,6 +521,7 @@ export default function TransactionHistoryPage({
 
         return {
             id: order.id.toString(),
+            invoice_number: order.invoice_number,
             date: order.created_at,
             status: (function (s: string): OrderStatus {
                 switch (s) {
