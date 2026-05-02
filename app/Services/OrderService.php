@@ -186,6 +186,9 @@ class OrderService
                 'total_amount' => $totalAmount + $shippingCost,
             ]);
 
+            // Deduct materials (hold stock) immediately upon order creation
+            $this->deductMaterialsForOrder($order);
+
             // --- 5. CLEAR CART ---
             $cart->items()->each(function($item) {
                 if ($item->customDetail) {
@@ -403,6 +406,37 @@ class OrderService
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Mengembalikan stok bahan untuk pesanan yang dibatalkan.
+     */
+    public function restoreMaterialsForOrder(Order $order)
+    {
+        $logs = \App\Models\MaterialStockLog::where('notes', 'like', "Pesanan #{$order->id} %")
+            ->where('type', 'out')
+            ->get();
+
+        foreach ($logs as $log) {
+            // Kembalikan ke batch stok asal jika masih ada
+            $batch = \App\Models\MaterialStock::find($log->material_stock_id);
+            if ($batch) {
+                $batch->increment('remaining_quantity', $log->quantity);
+            }
+
+            // Kembalikan total stok di tabel materials
+            \App\Models\Material::where('id', $log->material_id)->increment('stock', $log->quantity);
+
+            // Catat pengembalian stok
+            \App\Models\MaterialStockLog::create([
+                'material_id' => $log->material_id,
+                'material_stock_id' => $log->material_stock_id,
+                'created_by' => auth()->id() ?? 1,
+                'quantity' => $log->quantity,
+                'type' => 'in',
+                'notes' => "Pengembalian stok dari pesanan batal (Pesanan #{$order->id})"
+            ]);
         }
     }
 

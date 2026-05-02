@@ -29,6 +29,10 @@ class MidtransService
             ],
             'callbacks' => [
                 'finish_url' => route('user.payment.success'),
+            ],
+            'custom_expiry' => [
+                'expiry_duration' => 15,
+                'unit' => 'minute'
             ]
         ];
 
