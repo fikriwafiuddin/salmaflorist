@@ -511,7 +511,8 @@ class OrderService
                         }
                     })
                     ->latest("orders.created_at")
-                    ->paginate(10);
+                    ->paginate(10)
+                    ->withQueryString();
 
         return $orders;
     }
@@ -538,7 +539,8 @@ class OrderService
 
         $orders = Order::query()
                     ->whereDate('schedule', $parsedDate)
-                    ->paginate(10);
+                    ->paginate(10)
+                    ->withQueryString();
 
         return $orders;
     }
@@ -556,7 +558,8 @@ class OrderService
         $orders = Order::query()
                     ->whereBetween('schedule', [$start, $end])
                     ->with(['orderItems.product'])
-                    ->paginate(10);
+                    ->paginate(10)
+                    ->withQueryString();
 
         return $orders;
     }
