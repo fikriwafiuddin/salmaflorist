@@ -448,6 +448,13 @@ class OrderService
             throw new \Exception('Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
         }
 
+        if (!empty($data['tracking_number'])) {
+            $order->shipment()->updateOrCreate(
+                ['order_id' => $order->id],
+                ['tracking_number' => $data['tracking_number']]
+            );
+        }
+
         return $order->update(['status' => $data['status']]);
     }
 

@@ -22,7 +22,8 @@ class OrderRequestUpdateStatus extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|in:pending,paid,process,completed,canceled'
+            'status' => 'required|in:pending,paid,process,ready_for_pickup,delivered,completed,canceled',
+            'tracking_number' => 'nullable|string'
         ];
     }
 
@@ -37,6 +38,10 @@ class OrderRequestUpdateStatus extends FormRequest
 
             if ($order && !$order->is_paid && in_array($status, ['process', 'completed'])) {
                 $validator->errors()->add('status', 'Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
+            }
+
+            if ($order && $status === 'delivered' && $order->order_source === 'web' && empty($this->tracking_number)) {
+                $validator->errors()->add('tracking_number', 'Nomor resi (tracking number) wajib diisi untuk pesanan dari web yang statusnya dikirim.');
             }
         });
     }

@@ -64,6 +64,7 @@ export interface Order extends TimeStamp {
     total_amount: number;
     is_paid: boolean;
     shipping_method: 'delivery' | 'pickup';
+    order_source: 'web' | 'store';
     notes: string | null;
     status: string;
     created_at: Date;

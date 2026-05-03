@@ -21,8 +21,16 @@ export function resolveUrl(url: NonNullable<InertiaLinkProps['href']>): string {
 
 export function translateStatus(status: string): string {
     switch (status) {
+        case 'pending':
+            return 'Pending';
+        case 'paid':
+            return 'Sudah Bayar';
         case 'process':
             return 'Diproses';
+        case 'ready_for_pickup':
+            return 'Siap Diambil';
+        case 'delivered':
+            return 'Dikirim';
         case 'completed':
             return 'Selesai';
         case 'canceled':
