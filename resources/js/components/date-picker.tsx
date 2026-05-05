@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 type DatePickerProps = {
     onChange: (date: Date) => void;
-    value: Date;
+    value: Date | undefined;
 };
 
 function DatePicker({ onChange, value }: DatePickerProps) {

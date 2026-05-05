@@ -53,7 +53,7 @@ class ReportController extends Controller
             'orderChart' => $orderChart,
             'shippingMethodChart' => $shippingMethodChart,
             'paymentStatusChart' => $paymentStatusChart,
-            'filters' => $request->only(['year', 'month'])
+            'filters' => $request->only(['year', 'month', 'date'])
         ]);
     }
 

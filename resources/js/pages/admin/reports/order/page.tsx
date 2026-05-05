@@ -41,8 +41,9 @@ type ReportOrderPageProps = {
         totalRevenue: number;
     };
     orderChart: {
-        data: string;
+        date: string;
         order: number;
+        is_hourly: boolean;
     }[];
     shippingMethodChart: {
         shipping_method: string;
@@ -57,6 +58,7 @@ type ReportOrderPageProps = {
     filters: {
         year: string;
         month: string;
+        date: string;
     };
 };
 
@@ -122,7 +124,7 @@ function ReportOrderPage({
                 <div className="flex justify-end">
                     <Button asChild>
                         <a
-                            href={`${excel().url}?year=${filters.year || new Date().getFullYear()}&month=${filters.month || new Date().getMonth() + 1}`}
+                            href={`${excel().url}?year=${filters.year}&month=${filters.month}&date=${filters.date || ''}`}
                             target="_blank"
                             rel="noopener noreferrer"
                         >

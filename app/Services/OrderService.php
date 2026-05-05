@@ -697,19 +697,25 @@ class OrderService
     {
         $year = $request->year;
         $month = $request->month;
+        $date = $request->date;
 
-        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
-            $year = Carbon::now()->year;
-        }
-
-        if (!is_numeric($month) || $month < 0 || $month > 11) {
-            $month = Carbon::now()->month;
+        if ($date) {
+            $startDate = Carbon::parse($date)->startOfDay();
+            $endDate = Carbon::parse($date)->endOfDay();
         } else {
-            $month = intval($month) + 1;
-        }
+            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+                $year = Carbon::now()->year;
+            }
 
-        $startDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->startOfDay();
-        $endDate   = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->endOfMonth()->endOfDay();
+            if (!is_numeric($month) || $month < 0 || $month > 11) {
+                $month = Carbon::now()->month;
+            } else {
+                $month = intval($month) + 1;
+            }
+
+            $startDate = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->startOfDay();
+            $endDate   = Carbon::createFromDate($year, $month, 1, 'Asia/Jakarta')->endOfMonth()->endOfDay();
+        }
 
         $query = Order::query()
             ->whereBetween('created_at', [$startDate, $endDate]);
@@ -752,41 +758,64 @@ class OrderService
     {
         $year = $request->year;
         $month = $request->month;
+        $date = $request->date;
 
-        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
-            $year = Carbon::now()->year;
-        }
+        if ($date) {
+            $startDate = Carbon::parse($date)->startOfDay();
+            $endDate = Carbon::parse($date)->endOfDay();
 
-        if (!is_numeric($month) || $month < 0 || $month > 11) {
-            $month = Carbon::now()->month;
+            $orders = Order::selectRaw('HOUR(created_at) as hour, COUNT(*) as order_count')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->groupBy('hour')
+                ->orderBy('hour')
+                ->get()
+                ->keyBy('hour');
+
+            $chartData = [];
+            for ($i = 0; $i < 24; $i++) {
+                $chartData[] = [
+                    'date' => str_pad($i, 2, '0', STR_PAD_LEFT) . ':00',
+                    'order' => $orders->has($i) ? (int)$orders[$i]->order_count : 0,
+                    'is_hourly' => true
+                ];
+            }
         } else {
-            $month = intval($month) + 1;
-        }
+            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+                $year = Carbon::now()->year;
+            }
 
-        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+            if (!is_numeric($month) || $month < 0 || $month > 11) {
+                $month = Carbon::now()->month;
+            } else {
+                $month = intval($month) + 1;
+            }
 
-        $orders = Order::selectRaw('DATE(created_at) as date, COUNT(*) as order_count')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->keyBy('date');
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
 
-        $chartData = [];
-        $current = $startDate->copy();
+            $orders = Order::selectRaw('DATE(created_at) as date, COUNT(*) as order_count')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->keyBy('date');
 
-        while ($current->lte($endDate)) {
-            $dateString = $current->format('Y-m-d');
+            $chartData = [];
+            $current = $startDate->copy();
 
-            $chartData[] = [
-                'date'  => $dateString,
-                'order' => $orders->has($dateString)
-                    ? (int)$orders[$dateString]->order_count
-                    : 0,
-            ];
+            while ($current->lte($endDate)) {
+                $dateString = $current->format('Y-m-d');
 
-            $current->addDay();
+                $chartData[] = [
+                    'date'  => $dateString,
+                    'order' => $orders->has($dateString)
+                        ? (int)$orders[$dateString]->order_count
+                        : 0,
+                    'is_hourly' => false
+                ];
+
+                $current->addDay();
+            }
         }
 
         return $chartData;
@@ -796,19 +825,25 @@ class OrderService
     {
         $year = $request->year;
         $month = $request->month;
+        $date = $request->date;
 
-        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
-            $year = Carbon::now()->year;
-        }
-
-        if (!is_numeric($month) || $month < 0 || $month > 11) {
-            $month = Carbon::now()->month;
+        if ($date) {
+            $startDate = Carbon::parse($date)->startOfDay();
+            $endDate = Carbon::parse($date)->endOfDay();
         } else {
-            $month = intval($month) + 1;
-        }
+            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+                $year = Carbon::now()->year;
+            }
 
-        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+            if (!is_numeric($month) || $month < 0 || $month > 11) {
+                $month = Carbon::now()->month;
+            } else {
+                $month = intval($month) + 1;
+            }
+
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+        }
 
         $results = Order::selectRaw('shipping_method, COUNT(*) as total')
             ->whereBetween('created_at', [$startDate, $endDate])
@@ -834,19 +869,25 @@ class OrderService
     {
         $year = $request->year;
         $month = $request->month;
+        $date = $request->date;
 
-        if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
-            $year = Carbon::now()->year;
-        }
-
-        if (!is_numeric($month) || $month < 0 || $month > 11) {
-            $month = Carbon::now()->month;
+        if ($date) {
+            $startDate = Carbon::parse($date)->startOfDay();
+            $endDate = Carbon::parse($date)->endOfDay();
         } else {
-            $month = intval($month) + 1;
-        }
+            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+                $year = Carbon::now()->year;
+            }
 
-        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+            if (!is_numeric($month) || $month < 0 || $month > 11) {
+                $month = Carbon::now()->month;
+            } else {
+                $month = intval($month) + 1;
+            }
+
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+        }
 
         $results = Order::selectRaw('is_paid, COUNT(*) as total')
             ->whereBetween('created_at', [$startDate, $endDate])

@@ -22,17 +22,22 @@ const chartConfig = {
 
 type OrderChartProps = {
     chartData: {
-        data: string;
+        date: string;
         order: number;
+        is_hourly: boolean;
     }[];
 };
 
 function OrderChart({ chartData }: OrderChartProps) {
+    const isHourly = chartData.length > 0 && chartData[0].is_hourly;
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Grafik Pesanan</CardTitle>
-                <CardDescription>Grafik pesanan dalam 1 bulan</CardDescription>
+                <CardDescription>
+                    {isHourly ? 'Grafik pesanan per jam (24 Jam)' : 'Grafik pesanan dalam 1 bulan'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer
@@ -66,9 +71,11 @@ function OrderChart({ chartData }: OrderChartProps) {
                             tickLine={false}
                             axisLine={false}
                             tickMargin={8}
-                            minTickGap={32}
+                            minTickGap={isHourly ? 2 : 32}
                             tickFormatter={(value) => {
+                                if (isHourly) return value;
                                 const date = new Date(value);
+                                if (isNaN(date.getTime())) return value;
                                 return date.toLocaleDateString('id-ID', {
                                     month: 'short',
                                     day: 'numeric',
@@ -80,11 +87,14 @@ function OrderChart({ chartData }: OrderChartProps) {
                             content={
                                 <ChartTooltipContent
                                     labelFormatter={(value) => {
-                                        return new Date(
-                                            value,
-                                        ).toLocaleDateString('id-ID', {
-                                            month: 'short',
+                                        if (isHourly) return `Pukul ${value}`;
+                                        const date = new Date(value);
+                                        if (isNaN(date.getTime())) return value;
+                                        return date.toLocaleDateString('id-ID', {
+                                            weekday: 'long',
                                             day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric',
                                         });
                                     }}
                                     indicator="dot"
@@ -98,7 +108,6 @@ function OrderChart({ chartData }: OrderChartProps) {
                             stroke="var(--color-order)"
                             stackId="a"
                         />
-                        {/* <ChartLegend content={<ChartLegendContent />} /> */}
                     </AreaChart>
                 </ChartContainer>
             </CardContent>
