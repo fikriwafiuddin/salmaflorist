@@ -22,6 +22,8 @@ class MaterialController extends Controller
      */
     public function index(Request $request)
     {
+        $this->materialService->handleExpiredStocks();
+
         $materials = $this->materialService->getAll($request);
 
         return Inertia::render('admin/materials/index/page', [

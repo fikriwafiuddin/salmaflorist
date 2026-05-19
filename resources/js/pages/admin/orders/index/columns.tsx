@@ -49,6 +49,13 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
+        accessorKey: 'order_source',
+        header: 'Sumber Order',
+        cell: ({ row }) => {
+            return row.original.order_source === 'store' ? 'Toko' : 'Website';
+        },
+    },
+    {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => {

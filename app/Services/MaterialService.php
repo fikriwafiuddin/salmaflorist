@@ -207,4 +207,41 @@ class MaterialService
             return true;
         });
     }
+
+    /**
+     * Proses otomatis pengurangan stok untuk batch yang sudah kadaluarsa.
+     */
+    public function handleExpiredStocks()
+    {
+        DB::transaction(function () {
+            $expiredStocks = \App\Models\MaterialStock::where('remaining_quantity', '>', 0)
+                ->whereNotNull('expired_date')
+                ->where('expired_date', '<=', now())
+                ->get();
+
+            foreach ($expiredStocks as $stock) {
+                $qty = $stock->remaining_quantity;
+                $materialId = $stock->material_id;
+
+                // Catat log pengeluaran untuk stok yang kadaluarsa
+                \App\Models\MaterialStockLog::create([
+                    'material_id' => $materialId,
+                    'material_stock_id' => $stock->id,
+                    'created_by' => auth()->id(),
+                    'quantity' => $qty,
+                    'type' => 'out',
+                    'notes' => 'Stok kadaluarsa otomatis',
+                ]);
+
+                // Kurangi sisa kuantitas menjadi 0 dan nonaktifkan batch ini
+                $stock->update([
+                    'remaining_quantity' => 0,
+                    'is_active' => false,
+                ]);
+
+                // Kurangi total stok di tabel materials
+                Material::where('id', $materialId)->decrement('stock', $qty);
+            }
+        });
+    }
 }
