@@ -55,7 +55,16 @@ class MaterialController extends Controller
      */
     public function show(Material $material)
     {
-        //
+        $logs = $material->materialStockLogs()
+            ->with(['user', 'materialStock.batchStock'])
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('admin/materials/show/page', [
+            'material' => $material,
+            'logs'      => $logs,
+        ]);
     }
 
     /**

@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { edit } from '@/routes/materials';
+import { edit, show } from '@/routes/materials';
 import { Material } from '@/types';
 import { Link } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
-import { EditIcon } from 'lucide-react';
+import { EditIcon, HistoryIcon } from 'lucide-react';
 import DeleteMaterial from '../DeleteMaterial';
 import AddItemCalculator from './AddItemCalculator';
 
@@ -43,6 +43,11 @@ const columns: ColumnDef<Material>[] = [
 
             return (
                 <div className="flex gap-2">
+                    <Link href={show(id).url}>
+                        <Button variant="outline" title="Riwayat Stok">
+                            <HistoryIcon />
+                        </Button>
+                    </Link>
                     <Link href={edit(id)}>
                         <Button>
                             <EditIcon />
