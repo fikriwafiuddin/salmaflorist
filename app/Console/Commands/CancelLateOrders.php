@@ -25,20 +25,8 @@ class CancelLateOrders extends Command
      */
     public function handle(\App\Services\OrderService $orderService)
     {
-        $lateOrders = \App\Models\Order::whereIn('status', ['process', 'pending'])
-            ->where('is_paid', false)
-            ->where('schedule', '<', now()->timezone('Asia/Jakarta'))
-            ->get();
+        $count = $orderService->cancelExpiredOrders();
 
-        $count = 0;
-        foreach ($lateOrders as $order) {
-            if ($order->status !== 'canceled') {
-                $order->update(['status' => 'canceled']);
-                $orderService->restoreMaterialsForOrder($order);
-                $count++;
-            }
-        }
-
-        $this->info("Berhasil membatalkan {$count} pesanan yang telat bayar.");
+        $this->info("Berhasil membatalkan {$count} pesanan yang kedaluwarsa (15 menit).");
     }
 }

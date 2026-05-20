@@ -511,6 +511,28 @@ class OrderService
         });
     }
 
+    /**
+     * Membatalkan pesanan yang belum dibayar dan sudah melewati batas waktu 15 menit.
+     */
+    public function cancelExpiredOrders()
+    {
+        $expiredOrders = \App\Models\Order::whereIn('status', ['pending', 'process'])
+            ->where('is_paid', false)
+            ->where('created_at', '<', now()->subMinutes(15))
+            ->get();
+
+        $count = 0;
+        foreach ($expiredOrders as $order) {
+            if ($order->status !== 'canceled') {
+                $order->update(['status' => 'canceled']);
+                $this->restoreMaterialsForOrder($order);
+                $count++;
+            }
+        }
+        
+        return $count;
+    }
+
     public function getAll(object $request)
     {
         $year = $request->year ?? Carbon::now()->year;

@@ -32,6 +32,9 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        // Cancel any expired unpaid orders before fetching the list
+        $this->orderService->cancelExpiredOrders();
+        
         $orders = $this->orderService->getAll($request);
 
         return Inertia::render('admin/orders/index/page', [

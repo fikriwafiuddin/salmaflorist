@@ -85,10 +85,10 @@ class OrderController extends Controller
             ->where('status', 'pending')
             ->firstOrFail();
 
-        if ($order->created_at->addHours(24)->isPast()) {
+        if ($order->created_at->addMinutes(15)->isPast()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pesanan telah kadaluarsa'
+                'message' => 'Pesanan telah kadaluarsa (melewati 15 menit)'
             ], 400);
         }
 

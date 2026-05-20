@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Jalankan pengecekan pesanan telat setiap jam
-Schedule::command('orders:cancel-late')->hourly();
+// Jalankan pengecekan pesanan telat setiap menit (kadaluwarsa 15 menit)
+Schedule::command('orders:cancel-late')->everyMinute();

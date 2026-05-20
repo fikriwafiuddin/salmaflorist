@@ -77,7 +77,9 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
             <div className="space-y-4 p-4">
                 {/* Header Actions */}
                 <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                    <h2 className="text-2xl font-semibold">Riwayat Stok Bahan</h2>
+                    <h2 className="text-2xl font-semibold">
+                        Riwayat Stok Bahan
+                    </h2>
                     <Link href={index().url}>
                         <Button variant="outline">
                             <ArrowLeftIcon className="mr-2 h-4 w-4" /> Kembali
@@ -94,7 +96,9 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-xl font-bold">{material.name}</div>
+                            <div className="text-xl font-bold">
+                                {material.name}
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -106,7 +110,8 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-xl font-bold">
-                                {material.stock.toLocaleString()} {material.unit}
+                                {material.stock.toLocaleString()}{' '}
+                                {material.unit}
                             </div>
                         </CardContent>
                     </Card>
@@ -148,8 +153,11 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Waktu</TableHead>
+                                    <TableHead>Batch ID</TableHead>
                                     <TableHead>Tipe</TableHead>
-                                    <TableHead className="text-right">Jumlah</TableHead>
+                                    <TableHead className="text-right">
+                                        Jumlah
+                                    </TableHead>
                                     <TableHead>Oleh</TableHead>
                                     <TableHead>Catatan / Keterangan</TableHead>
                                 </TableRow>
@@ -157,8 +165,12 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
                             <TableBody>
                                 {logs.data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            Belum ada riwayat perubahan stok untuk bahan ini.
+                                        <TableCell
+                                            colSpan={5}
+                                            className="h-24 text-center"
+                                        >
+                                            Belum ada riwayat perubahan stok
+                                            untuk bahan ini.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -168,26 +180,40 @@ function MaterialShowPage({ material, logs }: MaterialShowPageProps) {
                                                 {format(
                                                     new Date(log.created_at),
                                                     'dd MMMM yyyy HH:mm',
-                                                    { locale: id }
+                                                    { locale: id },
                                                 )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {log.material_stock?.batch_stock
+                                                    ?.id || '-'}
                                             </TableCell>
                                             <TableCell>
                                                 {log.type === 'in' ? (
                                                     <Badge variant="success">
-                                                        <TrendingUpIcon className="mr-1 h-3.5 w-3.5" /> Masuk
+                                                        <TrendingUpIcon className="mr-1 h-3.5 w-3.5" />{' '}
+                                                        Masuk
                                                     </Badge>
                                                 ) : (
                                                     <Badge variant="destructive">
-                                                        <TrendingDownIcon className="mr-1 h-3.5 w-3.5" /> Keluar
+                                                        <TrendingDownIcon className="mr-1 h-3.5 w-3.5" />{' '}
+                                                        Keluar
                                                     </Badge>
                                                 )}
                                             </TableCell>
-                                            <TableCell className={`text-right font-semibold ${log.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
+                                            <TableCell
+                                                className={`text-right font-semibold ${log.type === 'in' ? 'text-green-600' : 'text-red-600'}`}
+                                            >
                                                 {log.type === 'in' ? '+' : '-'}
-                                                {log.quantity.toLocaleString()} {material.unit}
+                                                {log.quantity.toLocaleString()}{' '}
+                                                {material.unit}
                                             </TableCell>
-                                            <TableCell>{log.user?.name || 'Sistem'}</TableCell>
-                                            <TableCell className="max-w-[300px] truncate" title={log.notes || '-'}>
+                                            <TableCell>
+                                                {log.user?.name || 'Sistem'}
+                                            </TableCell>
+                                            <TableCell
+                                                className="max-w-[300px] truncate"
+                                                title={log.notes || '-'}
+                                            >
                                                 {log.notes || '-'}
                                             </TableCell>
                                         </TableRow>

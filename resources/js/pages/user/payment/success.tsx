@@ -5,11 +5,11 @@ import { CheckCircle2, ChevronRight } from 'lucide-react';
 export default function PaymentSuccessPage() {
     return (
         <>
-            <Head title="Pembayaran Berhasil – Salma Florist" />
+            <Head title="Pembayaran Berhasil - Salma Florist" />
             <div className="min-h-screen bg-[oklch(0.9789_0.0128_345.48)]">
                 <header className="border-b border-pink-100 bg-white/80 backdrop-blur-md">
                     <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-                        <Link href="/" className="flex items-center gap-2">
+                        <a href="/" className="flex items-center gap-2">
                             <img
                                 src="/logo.png"
                                 alt="Salma Florist"
@@ -18,7 +18,7 @@ export default function PaymentSuccessPage() {
                             <span className="font-playfair-display text-lg font-semibold text-primary">
                                 Salma Florist
                             </span>
-                        </Link>
+                        </a>
                     </div>
                 </header>
 
@@ -87,10 +87,10 @@ export default function PaymentSuccessPage() {
                             <Link href="/transactions">Riwayat Transaksi</Link>
                         </Button>
                         <Button asChild>
-                            <Link href="/catalog">
+                            <a href="/catalog">
                                 Belanja Lagi{' '}
                                 <ChevronRight className="ml-1 h-4 w-4" />
-                            </Link>
+                            </a>
                         </Button>
                     </div>
                 </main>

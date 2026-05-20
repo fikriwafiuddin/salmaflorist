@@ -28,16 +28,16 @@ class CheckoutRequest extends FormRequest
             'address' => 'required|array',
             'address.customer_name' => 'required|string',
             'address.whatsapp_number' => 'required|string',
-            'address.address_detail' => 'required_if:shipping_method,delivery|string',
-            'address.province_id' => 'required_if:shipping_method,delivery',
-            'address.city_id' => 'required_if:shipping_method,delivery',
-            'address.district_id' => 'required_if:shipping_method,delivery',
+            'address.address_detail' => 'nullable|required_if:shipping_method,delivery|string',
+            'address.province_id' => 'nullable|required_if:shipping_method,delivery',
+            'address.city_id' => 'nullable|required_if:shipping_method,delivery',
+            'address.district_id' => 'nullable|required_if:shipping_method,delivery',
             'address.notes' => 'nullable|string',
 
             // Courier details (required if delivery)
-            'courier' => 'required_if:shipping_method,delivery|array',
-            'courier.code' => 'required_if:shipping_method,delivery|string',
-            'courier.service' => 'required_if:shipping_method,delivery|string',
+            'courier' => 'nullable|required_if:shipping_method,delivery|array',
+            'courier.code' => 'nullable|required_if:shipping_method,delivery|string',
+            'courier.service' => 'nullable|required_if:shipping_method,delivery|string',
         ];
     }
 }
