@@ -24,11 +24,10 @@ class CheckoutRequest extends FormRequest
         return [
             'shipping_method' => 'required|in:delivery,pickup',
             'notes' => 'nullable|string',
-            
-            // Address details (required if delivery)
-            'address' => 'required_if:shipping_method,delivery|array',
-            'address.customer_name' => 'required_if:shipping_method,delivery|string',
-            'address.whatsapp_number' => 'required_if:shipping_method,delivery|string',
+            // Address details (always required for recipient info)
+            'address' => 'required|array',
+            'address.customer_name' => 'required|string',
+            'address.whatsapp_number' => 'required|string',
             'address.address_detail' => 'required_if:shipping_method,delivery|string',
             'address.province_id' => 'required_if:shipping_method,delivery',
             'address.city_id' => 'required_if:shipping_method,delivery',

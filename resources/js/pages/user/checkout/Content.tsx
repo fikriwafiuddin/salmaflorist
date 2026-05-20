@@ -153,18 +153,18 @@ export default function ContentCheckoutPage({
         const data = {
             shipping_method: shippingMethod,
             notes: form.notes_recipient,
-            address:
-                shippingMethod === 'delivery'
-                    ? {
-                          customer_name: form.recipient_name,
-                          whatsapp_number: form.whatsapp,
-                          address_detail: form.address_detail,
-                          province_id: form.province,
-                          city_id: form.city,
-                          district_id: form.district,
-                          notes: form.notes_recipient,
-                      }
-                    : null,
+            address: {
+                customer_name: form.recipient_name,
+                whatsapp_number: form.whatsapp,
+                address_detail:
+                    shippingMethod === 'delivery' ? form.address_detail : '-',
+                province_id:
+                    shippingMethod === 'delivery' ? form.province : null,
+                city_id: shippingMethod === 'delivery' ? form.city : null,
+                district_id:
+                    shippingMethod === 'delivery' ? form.district : null,
+                notes: form.notes_recipient,
+            },
             courier:
                 shippingMethod === 'delivery'
                     ? {
@@ -205,7 +205,13 @@ export default function ContentCheckoutPage({
     };
 
     const subtotal = cart.items.reduce((total, item) => {
-        const price = item.product?.price || item.unit_price || 0;
+        const price =
+            item.product?.price ||
+            item.custom_detail?.materials?.reduce(
+                (total, material) => total + material.material.price,
+                0,
+            ) ||
+            0;
         return total + price * item.quantity;
     }, 0);
     const total = subtotal + (form.shipping?.cost || 0);
@@ -608,23 +614,6 @@ export default function ContentCheckoutPage({
                                                 }
                                             />
                                         </div>
-                                        {/* <div className="grid gap-2">
-                                            <Label htmlFor="postal">
-                                                Kode Pos
-                                            </Label>
-                                            <Input
-                                                id="postal"
-                                                placeholder="64100"
-                                                className="max-w-[160px]"
-                                                value={form.postal}
-                                                onChange={(e) =>
-                                                    setForm({
-                                                        ...form,
-                                                        postal: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </div> */}
                                     </div>
                                 </SectionCard>
                             )}
@@ -660,15 +649,22 @@ export default function ContentCheckoutPage({
                                         >
                                             <span className="flex-1 truncate pr-2">
                                                 {item.is_custom
-                                                    ? item.custom_name
+                                                    ? item.custom_detail?.name
                                                     : item.product?.name}{' '}
                                                 x {item.quantity}
                                             </span>
                                             <span className="font-medium text-foreground">
                                                 {formatRupiah(
                                                     (item?.product?.price ||
-                                                        item.unit_price) *
-                                                        item.quantity,
+                                                        item.custom_detail?.materials?.reduce(
+                                                            (total, material) =>
+                                                                total +
+                                                                material
+                                                                    .material
+                                                                    .price,
+                                                            0,
+                                                        ) ||
+                                                        0) * item.quantity,
                                                 )}
                                             </span>
                                         </div>

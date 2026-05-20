@@ -81,7 +81,19 @@ class OrderService
             }
 
             // --- 2. HANDLE ADDRESS & SHIPPING ---
-            $addressId = null;
+            $address = Address::create([
+                'customer_name' => $data['address']['customer_name'],
+                'whatsapp_number' => $data['address']['whatsapp_number'],
+                'address_detail' => $data['address']['address_detail'] ?? '-',
+                'province_id' => $data['address']['province_id'] ?? null,
+                'province_name' => null, // will populate if delivery
+                'city_id' => $data['address']['city_id'] ?? null,
+                'city_name' => null,
+                'district_id' => $data['address']['district_id'] ?? null,
+                'district_name' => null,
+            ]);
+            $addressId = $address->id;
+            
             $courierServiceId = null;
             $shippingCost = 0;
 
@@ -92,18 +104,11 @@ class OrderService
                 $city = \App\Models\City::find($data['address']['city_id']);
                 $district = \App\Models\District::find($data['address']['district_id']);
 
-                $address = Address::create([
-                    'customer_name' => $data['address']['customer_name'],
-                    'whatsapp_number' => $data['address']['whatsapp_number'],
-                    'address_detail' => $data['address']['address_detail'],
-                    'province_id' => $data['address']['province_id'],
+                $address->update([
                     'province_name' => $province->name ?? '',
-                    'city_id' => $data['address']['city_id'],
                     'city_name' => $city->name ?? '',
-                    'district_id' => $data['address']['district_id'],
                     'district_name' => $district->name ?? '',
                 ]);
-                $addressId = $address->id;
 
                 $costs = $destinationService->getShippingCost([
                     'destination' => $data['address']['district_id'],
@@ -206,36 +211,34 @@ class OrderService
     {
         return DB::transaction(function () use ($data) {
             // --- 1. VALIDASI STOK (PRE-CHECK) ---
-            if ($data['is_paid']) {
-                $requiredMaterials = [];
-                foreach ($data['items'] as $item) {
-                    if (!$item['is_custom']) {
-                        $product = Product::with('materials')->findOrFail($item['product']['id']);
-                        foreach ($product->materials as $mat) {
-                            $materialId = $mat->id;
-                            $quantityNeeded = $mat->pivot->quantity * $item['quantity'];
-                            
-                            if (!isset($requiredMaterials[$materialId])) {
-                                $requiredMaterials[$materialId] = [
-                                    'id' => $materialId,
-                                    'quantity' => 0,
-                                    'name' => $mat->name,
-                                    'sources' => []
-                                ];
-                            }
-                            $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
-                            $requiredMaterials[$materialId]['sources'][] = [
-                                'product_name' => $product->name,
-                                'quantity' => $quantityNeeded
+            $requiredMaterials = [];
+            foreach ($data['items'] as $item) {
+                if (!$item['is_custom']) {
+                    $product = Product::with('materials')->findOrFail($item['product']['id']);
+                    foreach ($product->materials as $mat) {
+                        $materialId = $mat->id;
+                        $quantityNeeded = $mat->pivot->quantity * $item['quantity'];
+                        
+                        if (!isset($requiredMaterials[$materialId])) {
+                            $requiredMaterials[$materialId] = [
+                                'id' => $materialId,
+                                'quantity' => 0,
+                                'name' => $mat->name,
+                                'sources' => []
                             ];
                         }
+                        $requiredMaterials[$materialId]['quantity'] += $quantityNeeded;
+                        $requiredMaterials[$materialId]['sources'][] = [
+                            'product_name' => $product->name,
+                            'quantity' => $quantityNeeded
+                        ];
                     }
                 }
+            }
 
-                if (!empty($requiredMaterials)) {
-                    $materialService = app(MaterialService::class);
-                    $materialService->checkStockAvailability($requiredMaterials);
-                }
+            if (!empty($requiredMaterials)) {
+                $materialService = app(MaterialService::class);
+                $materialService->checkStockAvailability($requiredMaterials);
             }
 
             $totalAmount = 0;
@@ -254,7 +257,7 @@ class OrderService
             $order = Order::create([
                 'invoice_number'  => $this->generateInvoiceNumber(),
                 'address_id'      => $address->id,
-                'status'          => "process",
+                'status'          => $data['is_paid'] ? "process" : "pending",
                 'is_paid'         => $data['is_paid'],
                 'paid_at'         => $data['is_paid'] ? now() : null,
                 'shipping_method' => $data['shipping_method'],
@@ -302,9 +305,10 @@ class OrderService
                 'total_amount' => $totalAmount,
             ]);
 
-            if ($data['is_paid']) {
-                $this->deductMaterialsForOrder($order);
+            // Deduct materials (hold stock) immediately upon creation
+            $this->deductMaterialsForOrder($order);
 
+            if ($data['is_paid']) {
                 CashTransaction::create([
                     'type'             => 'income',
                     'category'         => 'order',
@@ -332,6 +336,7 @@ class OrderService
             $data['schedule'] = $schedule;
             
             $wasPaid = $order->is_paid;
+            $wasCanceled = $order->status === 'canceled';
             $isPaid = isset($data['is_paid']) ? (bool)$data['is_paid'] : $wasPaid;
             
             // For update, we might only update the main order details
@@ -347,8 +352,6 @@ class OrderService
 
             if (!$wasPaid && $isPaid) {
                 $order->update(['paid_at' => now(), 'is_paid' => true]);
-                
-                $this->deductMaterialsForOrder($order);
                 
                 CashTransaction::create([
                     'type'             => 'income',
@@ -366,6 +369,12 @@ class OrderService
                     ->where('category', 'order')
                     ->where('notes', 'like', "%(Invoice: {$order->invoice_number})%")
                     ->delete();
+            }
+
+            if (!$wasCanceled && $order->status === 'canceled') {
+                $this->restoreMaterialsForOrder($order);
+            } elseif ($wasCanceled && $order->status !== 'canceled') {
+                $this->deductMaterialsForOrder($order);
             }
 
             return $order;
@@ -442,27 +451,64 @@ class OrderService
 
     public function updateStatus (array $data, int $id)
     {
-        $order = $this->getById($id);
+        return DB::transaction(function () use ($data, $id) {
+            $order = $this->getById($id);
+            $wasPaid = $order->is_paid;
+            $wasCanceled = $order->status === 'canceled';
 
-        if (!$order->is_paid && in_array($data['status'], ['process', 'completed'])) {
-            throw new \Exception('Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
-        }
+            $newStatus = $data['status'];
 
-        if (!empty($data['tracking_number'])) {
-            $order->shipment()->updateOrCreate(
-                ['order_id' => $order->id],
-                ['tracking_number' => $data['tracking_number']]
-            );
-        }
+            if (!$wasPaid && $newStatus !== 'paid' && in_array($newStatus, ['process', 'completed'])) {
+                throw new \Exception('Status tidak bisa diubah ke Progres atau Selesai jika pesanan belum dibayar.');
+            }
 
-        return $order->update(['status' => $data['status']]);
+            // Handle payment transition when status becomes paid
+            if (!$wasPaid && $newStatus === 'paid') {
+                $order->update([
+                    'is_paid' => true,
+                    'paid_at' => now(),
+                ]);
+
+                CashTransaction::create([
+                    'type'             => 'income',
+                    'category'         => 'order',
+                    'payment_method'   => 'cash',
+                    'amount'           => $order->total_amount,
+                    'transaction_date' => now(),
+                    'notes'            => "Pembayaran pesanan dari {$order->address->customer_name} (Invoice: {$order->invoice_number})",
+                    'created_by'       => auth()->id(),
+                ]);
+            }
+
+            // Handle cancellation transition
+            if (!$wasCanceled && $newStatus === 'canceled') {
+                $this->restoreMaterialsForOrder($order);
+            } elseif ($wasCanceled && $newStatus !== 'canceled') {
+                $this->deductMaterialsForOrder($order);
+            }
+
+            if (!empty($data['tracking_number'])) {
+                $order->shipment()->updateOrCreate(
+                    ['order_id' => $order->id],
+                    ['tracking_number' => $data['tracking_number']]
+                );
+            }
+
+            return $order->update(['status' => $newStatus]);
+        });
     }
 
     public function delete(int $id)
     {
-        $order = $this->getById($id);
+        return DB::transaction(function () use ($id) {
+            $order = $this->getById($id);
 
-        return $order->delete();
+            if ($order->status !== 'canceled') {
+                $this->restoreMaterialsForOrder($order);
+            }
+
+            return $order->delete();
+        });
     }
 
     public function getAll(object $request)
