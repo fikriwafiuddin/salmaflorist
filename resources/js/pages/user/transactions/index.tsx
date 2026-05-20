@@ -531,6 +531,9 @@ export default function TransactionHistoryPage({
                         return 'payment_verified';
                     case 'process':
                         return 'processing';
+                    case 'ready_for_pickup':
+                        return 'ready';
+                    case 'delivered':
                     case 'completed':
                         return 'delivered';
                     case 'canceled':
