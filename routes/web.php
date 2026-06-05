@@ -81,6 +81,7 @@ Route::name('user.')->group(function() {
         Route::get('/payment/success', fn() => Inertia::render('user/payment/success'))->name('payment.success');
         Route::get('/transactions', [UserOrderController::class, 'index'])->name('transactions.index');
         Route::post('/transactions/{id}/pay', [UserOrderController::class, 'getPaymentToken'])->name('checkout.pay');
+        Route::post('/transactions/{id}/testimonials', [UserOrderController::class, 'storeTestimonial'])->name('transactions.testimonials.store');
 
         Route::get('/destinations/provinces', [DestinationController::class, 'getProvinces'])->name('destinations.provinces');
         Route::get('/destinations/city/{provinceId}', [DestinationController::class, 'getCities'])->name('destinations.city');

@@ -27,12 +27,12 @@ class TestimonyService
 
     public function getAll()
     {
-        return Testimonials::query()->paginate(10);
+        return Testimonials::with('user')->paginate(10);
     }
 
     public function getSome(int $limit)
     {
-        return Testimonials::limit($limit)->latest()->get();
+        return Testimonials::with('user')->limit($limit)->latest()->get();
     }
 
     public function getById(int $id)

@@ -10,6 +10,7 @@ import {
     ShoppingBag,
     Truck,
     XCircle,
+    Star,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -48,6 +49,11 @@ interface Transaction {
     subtotal: number;
     shipping_cost: number;
     address?: string;
+    has_testimonial: boolean;
+    testimonial?: {
+        rating: number;
+        review: string;
+    };
 }
 
 interface OrderItemModel {
@@ -72,6 +78,11 @@ interface OrderModel {
         province_name: string;
     };
     order_items: OrderItemModel[];
+    testimonial?: {
+        id: number;
+        rating: number;
+        review: string;
+    };
 }
 
 // Removed mock data
@@ -297,6 +308,97 @@ function StatusStepper({
     );
 }
 
+// ── Testimonial Modal ──────────────────────────────────────────────────────
+function TestimonialModal({
+    isOpen,
+    onClose,
+    onSubmit,
+    isSubmitting,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: (rating: number, review: string) => void;
+    isSubmitting: boolean;
+}) {
+    const [rating, setRating] = useState(0);
+    const [hover, setHover] = useState(0);
+    const [review, setReview] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setRating(0);
+            setHover(0);
+            setReview('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <h3 className="mb-1 text-xl font-bold text-foreground">
+                    Beri Ulasan
+                </h3>
+                <p className="mb-5 text-sm text-muted-foreground">
+                    Bagaimana pengalaman Anda berbelanja dengan kami?
+                </p>
+
+                <div className="mb-5 flex justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                            key={star}
+                            type="button"
+                            className="transition-transform hover:scale-110 focus:outline-none"
+                            onClick={() => setRating(star)}
+                            onMouseEnter={() => setHover(star)}
+                            onMouseLeave={() => setHover(0)}
+                        >
+                            <Star
+                                className={`h-8 w-8 ${
+                                    star <= (hover || rating)
+                                        ? 'fill-yellow-400 text-yellow-400'
+                                        : 'text-gray-200'
+                                }`}
+                            />
+                        </button>
+                    ))}
+                </div>
+
+                <div className="mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground">
+                        Komentar
+                    </label>
+                    <textarea
+                        value={review}
+                        onChange={(e) => setReview(e.target.value)}
+                        placeholder="Tuliskan pendapat Anda..."
+                        className="w-full resize-none rounded-xl border border-pink-100 bg-pink-50/30 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                        rows={4}
+                    />
+                </div>
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 rounded-xl border border-pink-100 bg-white py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-pink-50"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        onClick={() => onSubmit(rating, review)}
+                        disabled={rating === 0 || review.trim() === '' || isSubmitting}
+                        className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-all hover:bg-primary/90 disabled:opacity-50"
+                    >
+                        {isSubmitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Transaction Card ───────────────────────────────────────────────────────
 function TransactionCard({
     tx,
@@ -306,7 +408,31 @@ function TransactionCard({
     onPay: (id: string) => void;
 }) {
     const [open, setOpen] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const total = tx.subtotal + tx.shipping_cost;
+
+    const handleReviewSubmit = async (rating: number, review: string) => {
+        setIsSubmittingReview(true);
+        try {
+            const response = await axios.post(`/transactions/${tx.id}/testimonials`, {
+                rating,
+                review,
+            });
+            if (response.data.success) {
+                toast.success('Ulasan berhasil dikirim');
+                setIsReviewModalOpen(false);
+                router.reload();
+            }
+        } catch (error) {
+            const axiosError = error as AxiosError<{ message: string }>;
+            toast.error(
+                axiosError.response?.data?.message || 'Gagal mengirim ulasan',
+            );
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    };
 
     const isExpired = useMemo(() => {
         const targetDate = new Date(
@@ -369,6 +495,29 @@ function TransactionCard({
                     {tx.items.map((i) => `${i.name} ×${i.qty}`).join(', ')}
                 </p>
             </div>
+
+            {/* ── Testimonial Action ──────────────────────────────── */}
+            {tx.status === 'delivered' && (
+                <div className="border-t border-dashed border-pink-100 px-5 py-3">
+                    {tx.has_testimonial && tx.testimonial ? (
+                        <div className="flex items-center gap-2 rounded-lg bg-pink-50/50 px-3 py-2 text-sm text-foreground">
+                            <span className="flex items-center text-yellow-400">
+                                <Star className="mr-1 h-4 w-4 fill-current" />
+                                <span className="font-bold">{tx.testimonial.rating}</span>
+                            </span>
+                            <span className="text-muted-foreground line-clamp-1">"{tx.testimonial.review}"</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setIsReviewModalOpen(true)}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-100/50 py-2 text-sm font-medium text-primary transition-colors hover:bg-pink-100"
+                        >
+                            <Star className="h-4 w-4" />
+                            Beri Ulasan Pesanan
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* ── Toggle detail button ────────────────────────────── */}
             <button
@@ -474,6 +623,13 @@ function TransactionCard({
                     </div>
                 </div>
             )}
+
+            <TestimonialModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                onSubmit={handleReviewSubmit}
+                isSubmitting={isSubmittingReview}
+            />
         </div>
     );
 }
@@ -553,6 +709,8 @@ export default function TransactionHistoryPage({
             address: order.address
                 ? `${order.address.address_detail}, ${order.address.district_name}, ${order.address.city_name}, ${order.address.province_name}`
                 : undefined,
+            has_testimonial: !!order.testimonial,
+            testimonial: order.testimonial,
         };
     });
 

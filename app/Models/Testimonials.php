@@ -14,6 +14,18 @@ class Testimonials extends Model
         "rating"
     ];
 
+    protected $appends = ['customer_name', 'customer_status'];
+
+    public function getCustomerNameAttribute()
+    {
+        return $this->user ? $this->user->name : 'Pelanggan Anonim';
+    }
+
+    public function getCustomerStatusAttribute()
+    {
+        return 'Pelanggan Terverifikasi';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

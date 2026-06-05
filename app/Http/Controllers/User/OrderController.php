@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\CheckoutRequest;
 use App\Models\Order;
+use App\Models\Testimonials;
 use App\Services\CartService;
 use App\Services\DestinationService;
 use App\Services\OrderService;
@@ -35,7 +36,7 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::where('user_id', Auth::id())
-            ->with(['orderItems.product', 'address', 'shipment'])
+            ->with(['orderItems.product', 'address', 'shipment', 'testimonial'])
             ->latest()
             ->get();
 
@@ -105,5 +106,43 @@ class OrderController extends Controller
                 'message' => 'Internal server error'
             ], 500);
         }
+    }
+
+    public function storeTestimonial(Request $request, $id)
+    {
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'required|string|max:1000',
+        ]);
+
+        $order = Order::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if (!in_array($order->status, ['completed', 'delivered'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan belum selesai, tidak dapat memberikan ulasan.'
+            ], 400);
+        }
+
+        if ($order->testimonial) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah memberikan ulasan untuk pesanan ini.'
+            ], 400);
+        }
+
+        Testimonials::create([
+            'user_id' => Auth::id(),
+            'order_id' => $order->id,
+            'rating' => $request->rating,
+            'review' => $request->review,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ulasan berhasil disimpan.'
+        ]);
     }
 }
