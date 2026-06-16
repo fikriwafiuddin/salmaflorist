@@ -23,6 +23,13 @@ class CategoryService
     {
         $category = Category::findOrFail($id);
 
+        // Check if category has related products
+        if ($category->products()->count() > 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'products' => 'Kategori tidak dapat dihapus karena masih ada produk yang terkait.',
+            ]);
+        }
+
         return $category->delete();
     }
 

@@ -1,12 +1,11 @@
 import AppPagination from '@/components/app-pagination';
 import { DataTable } from '@/components/data-table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { create, index } from '@/routes/testimonials';
+import { index } from '@/routes/testimonials';
 import { BreadcrumbItem, Testimony } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { CheckCircleIcon } from 'lucide-react';
 import columns from './columns';
 
@@ -38,9 +37,9 @@ function TestimonialsIndexPage({ testimonials }: TestimonialsIndexPageProps) {
             <div className="space-y-4 p-4">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row">
                     <h2 className="text-2xl font-semibold">Kelola Testimoni</h2>
-                    <Link href={create()}>
+                    {/* <Link href={create()}>
                         <Button>+ Tambah Testimoni</Button>
-                    </Link>
+                    </Link> */}
                 </div>
 
                 {flash.success && (
