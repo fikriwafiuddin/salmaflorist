@@ -145,9 +145,19 @@ class OrderController extends Controller
     {
         $month = $request->month ?? now()->month;
         $year  = $request->year ?? now()->year;
+        $date  = $request->date;
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
 
-        $filename = "orders_{$year}_{$month}.xlsx";
+        // Generate filename based on filter type
+        if ($startDate && $endDate) {
+            $filename = "orders_{$startDate}_to_{$endDate}.xlsx";
+        } elseif ($date) {
+            $filename = "orders_{$date}.xlsx";
+        } else {
+            $filename = "orders_{$year}_{$month}.xlsx";
+        }
 
-        return Excel::download(new OrdersExport($month, $year), $filename);
+        return Excel::download(new OrdersExport($month, $year, $date, $startDate, $endDate), $filename);
     }
 }

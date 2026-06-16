@@ -59,6 +59,8 @@ type ReportOrderPageProps = {
         year: string;
         month: string;
         date: string;
+        start_date: string;
+        end_date: string;
     };
 };
 
@@ -124,7 +126,7 @@ function ReportOrderPage({
                 <div className="flex justify-end">
                     <Button asChild>
                         <a
-                            href={`${excel().url}?year=${filters.year}&month=${filters.month}&date=${filters.date || ''}`}
+                            href={`${excel().url}?year=${filters.year}&month=${filters.month}&date=${filters.date || ''}&start_date=${filters.start_date || ''}&end_date=${filters.end_date || ''}`}
                             target="_blank"
                             rel="noopener noreferrer"
                         >

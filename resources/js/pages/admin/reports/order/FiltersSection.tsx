@@ -37,6 +37,8 @@ type FiltersSectionProps = {
         year: string;
         month: string;
         date: string;
+        start_date: string;
+        end_date: string;
     };
 };
 
@@ -44,21 +46,33 @@ function FiltersSection({ filters }: FiltersSectionProps) {
     const initialYear = filters.year || new Date().getFullYear().toString();
     const initialMonth = filters.month || new Date().getMonth().toString(); // Standardized to 0-indexed
     const initialDate = filters.date || '';
+    const initialStartDate = filters.start_date || '';
+    const initialEndDate = filters.end_date || '';
 
     const [year, setYear] = useState(initialYear);
     const [month, setMonth] = useState(initialMonth);
     const [date, setDate] = useState<Date | undefined>(
         initialDate ? new Date(initialDate) : undefined,
     );
+    const [startDate, setStartDate] = useState<Date | undefined>(
+        initialStartDate ? new Date(initialStartDate) : undefined,
+    );
+    const [endDate, setEndDate] = useState<Date | undefined>(
+        initialEndDate ? new Date(initialEndDate) : undefined,
+    );
 
     const debouncedYear = useDebounce(year, 500);
     const debouncedMonth = useDebounce(month, 500);
     const debouncedDate = useDebounce(date, 500);
+    const debouncedStartDate = useDebounce(startDate, 500);
+    const debouncedEndDate = useDebounce(endDate, 500);
     const isInitialMount = useRef(true);
 
     const prevYear = useRef(initialYear);
     const prevMonth = useRef(initialMonth);
     const prevDateString = useRef(initialDate);
+    const prevStartDateString = useRef(initialStartDate);
+    const prevEndDateString = useRef(initialEndDate);
 
     useEffect(() => {
         if (isInitialMount.current) {
@@ -69,14 +83,25 @@ function FiltersSection({ filters }: FiltersSectionProps) {
         const dateString = debouncedDate
             ? format(debouncedDate, 'yyyy-MM-dd')
             : '';
+        const startDateString = debouncedStartDate
+            ? format(debouncedStartDate, 'yyyy-MM-dd')
+            : '';
+        const endDateString = debouncedEndDate
+            ? format(debouncedEndDate, 'yyyy-MM-dd')
+            : '';
+
         const yearChanged = debouncedYear !== prevYear.current;
         const monthChanged = debouncedMonth !== prevMonth.current;
         const dateChanged = dateString !== prevDateString.current;
+        const startDateChanged = startDateString !== prevStartDateString.current;
+        const endDateChanged = endDateString !== prevEndDateString.current;
 
-        if (yearChanged || monthChanged || dateChanged) {
+        if (yearChanged || monthChanged || dateChanged || startDateChanged || endDateChanged) {
             prevYear.current = String(debouncedYear);
             prevMonth.current = String(debouncedMonth);
             prevDateString.current = dateString;
+            prevStartDateString.current = startDateString;
+            prevEndDateString.current = endDateString;
 
             router.get(
                 order().url,
@@ -84,6 +109,8 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                     year: debouncedYear,
                     month: debouncedMonth,
                     date: dateString,
+                    start_date: startDateString,
+                    end_date: endDateString,
                 },
                 {
                     preserveState: true,
@@ -91,11 +118,19 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                 },
             );
         }
-    }, [debouncedYear, debouncedMonth, debouncedDate]);
+    }, [debouncedYear, debouncedMonth, debouncedDate, debouncedStartDate, debouncedEndDate]);
 
     const handleClearDate = () => {
         setDate(undefined);
     };
+
+    const handleClearDateRange = () => {
+        setStartDate(undefined);
+        setEndDate(undefined);
+    };
+
+    // Disable year/month filters when date or date range is selected
+    const disableYearMonth = !!(date || startDate || endDate);
 
     return (
         <Card>
@@ -108,7 +143,7 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div
                             className={
-                                date ? 'pointer-events-none opacity-50' : ''
+                                disableYearMonth ? 'pointer-events-none opacity-50' : ''
                             }
                         >
                             <Label htmlFor="year">Tahun:</Label>
@@ -143,7 +178,7 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                         </div>
                         <div
                             className={
-                                date ? 'pointer-events-none opacity-50' : ''
+                                disableYearMonth ? 'pointer-events-none opacity-50' : ''
                             }
                         >
                             <Label htmlFor="month">Bulan:</Label>
@@ -180,7 +215,14 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                         <div className="flex max-w-sm items-center gap-2">
                             <DatePicker
                                 value={date}
-                                onChange={(d) => setDate(d)}
+                                onChange={(d) => {
+                                    setDate(d);
+                                    // Clear date range when single date is selected
+                                    if (d) {
+                                        setStartDate(undefined);
+                                        setEndDate(undefined);
+                                    }
+                                }}
                             />
                             {date && (
                                 <Button
@@ -198,6 +240,67 @@ function FiltersSection({ filters }: FiltersSectionProps) {
                                 * Laporan saat ini difilter untuk tanggal{' '}
                                 {format(date, 'dd MMMM yyyy')}. Filter bulan &
                                 tahun diabaikan.
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Date Range Filter */}
+                    <div className="border-t pt-4">
+                        <Label
+                            htmlFor="date-range"
+                            className="mb-2 block font-semibold text-primary"
+                        >
+                            Atau Filter Per Range Tanggal:
+                        </Label>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                            <div className="flex flex-1 items-center gap-2">
+                                <Label htmlFor="start-date" className="min-w-16">
+                                    Dari:
+                                </Label>
+                                <DatePicker
+                                    value={startDate}
+                                    onChange={(d) => {
+                                        setStartDate(d);
+                                        // Clear single date when date range is selected
+                                        if (d) {
+                                            setDate(undefined);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="flex flex-1 items-center gap-2">
+                                <Label htmlFor="end-date" className="min-w-16">
+                                    Sampai:
+                                </Label>
+                                <DatePicker
+                                    value={endDate}
+                                    onChange={(d) => {
+                                        setEndDate(d);
+                                        // Clear single date when date range is selected
+                                        if (d) {
+                                            setDate(undefined);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            {(startDate || endDate) && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleClearDateRange}
+                                    title="Bersihkan filter range tanggal"
+                                >
+                                    <XIcon className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                        {(startDate || endDate) && (
+                            <p className="mt-2 text-sm text-muted-foreground italic">
+                                * Laporan saat ini difilter untuk range tanggal{' '}
+                                {startDate && format(startDate, 'dd MMMM yyyy')}
+                                {startDate && endDate && ' - '}
+                                {endDate && format(endDate, 'dd MMMM yyyy')}
+                                . Filter bulan & tahun diabaikan.
                             </p>
                         )}
                     </div>

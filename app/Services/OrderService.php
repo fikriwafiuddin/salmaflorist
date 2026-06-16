@@ -766,8 +766,14 @@ class OrderService
         $year = $request->year;
         $month = $request->month;
         $date = $request->date;
+        $startDateParam = $request->start_date;
+        $endDateParam = $request->end_date;
 
-        if ($date) {
+        // Check if date range is provided
+        if ($startDateParam && $endDateParam) {
+            $startDate = Carbon::parse($startDateParam)->startOfDay();
+            $endDate = Carbon::parse($endDateParam)->endOfDay();
+        } elseif ($date) {
             $startDate = Carbon::parse($date)->startOfDay();
             $endDate = Carbon::parse($date)->endOfDay();
         } else {
@@ -827,11 +833,36 @@ class OrderService
         $year = $request->year;
         $month = $request->month;
         $date = $request->date;
+        $startDateParam = $request->start_date;
+        $endDateParam = $request->end_date;
 
-        if ($date) {
+        // Check if date range is provided
+        if ($startDateParam && $endDateParam) {
+            $startDate = Carbon::parse($startDateParam)->startOfDay();
+            $endDate = Carbon::parse($endDateParam)->endOfDay();
+            $isDateRange = true;
+        } elseif ($date) {
             $startDate = Carbon::parse($date)->startOfDay();
             $endDate = Carbon::parse($date)->endOfDay();
+            $isDateRange = false;
+        } else {
+            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
+                $year = Carbon::now()->year;
+            }
 
+            if (!is_numeric($month) || $month < 0 || $month > 11) {
+                $month = Carbon::now()->month;
+            } else {
+                $month = intval($month) + 1;
+            }
+
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+            $isDateRange = false;
+        }
+
+        // Use hourly data for single date, daily data for date range or month
+        if ($date && !$startDateParam) {
             $orders = Order::selectRaw('HOUR(created_at) as hour, COUNT(*) as order_count')
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->groupBy('hour')
@@ -848,19 +879,6 @@ class OrderService
                 ];
             }
         } else {
-            if (!is_numeric($year) || $year < 2020 || $year > Carbon::now()->year) {
-                $year = Carbon::now()->year;
-            }
-
-            if (!is_numeric($month) || $month < 0 || $month > 11) {
-                $month = Carbon::now()->month;
-            } else {
-                $month = intval($month) + 1;
-            }
-
-            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
-
             $orders = Order::selectRaw('DATE(created_at) as date, COUNT(*) as order_count')
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->groupBy('date')
@@ -894,8 +912,14 @@ class OrderService
         $year = $request->year;
         $month = $request->month;
         $date = $request->date;
+        $startDateParam = $request->start_date;
+        $endDateParam = $request->end_date;
 
-        if ($date) {
+        // Check if date range is provided
+        if ($startDateParam && $endDateParam) {
+            $startDate = Carbon::parse($startDateParam)->startOfDay();
+            $endDate = Carbon::parse($endDateParam)->endOfDay();
+        } elseif ($date) {
             $startDate = Carbon::parse($date)->startOfDay();
             $endDate = Carbon::parse($date)->endOfDay();
         } else {
@@ -938,8 +962,14 @@ class OrderService
         $year = $request->year;
         $month = $request->month;
         $date = $request->date;
+        $startDateParam = $request->start_date;
+        $endDateParam = $request->end_date;
 
-        if ($date) {
+        // Check if date range is provided
+        if ($startDateParam && $endDateParam) {
+            $startDate = Carbon::parse($startDateParam)->startOfDay();
+            $endDate = Carbon::parse($endDateParam)->endOfDay();
+        } elseif ($date) {
             $startDate = Carbon::parse($date)->startOfDay();
             $endDate = Carbon::parse($date)->endOfDay();
         } else {

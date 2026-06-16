@@ -12,11 +12,17 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping
 {
     protected $month;
     protected $year;
-    
-    public function __construct($month, $year)
+    protected $date;
+    protected $startDate;
+    protected $endDate;
+
+    public function __construct($month = null, $year = null, $date = null, $startDate = null, $endDate = null)
     {
         $this->month = $month;
         $this->year  = $year;
+        $this->date  = $date;
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
     }
 
     /**
@@ -24,8 +30,17 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping
     */
     public function collection()
     {
-        $start = Carbon::create($this->year, $this->month, 1)->startOfDay();
-        $end   = Carbon::create($this->year, $this->month, 1)->endOfMonth()->endOfDay();
+        // Check if date range is provided
+        if ($this->startDate && $this->endDate) {
+            $start = Carbon::parse($this->startDate)->startOfDay();
+            $end   = Carbon::parse($this->endDate)->endOfDay();
+        } elseif ($this->date) {
+            $start = Carbon::parse($this->date)->startOfDay();
+            $end   = Carbon::parse($this->date)->endOfDay();
+        } else {
+            $start = Carbon::create($this->year, $this->month, 1)->startOfDay();
+            $end   = Carbon::create($this->year, $this->month, 1)->endOfMonth()->endOfDay();
+        }
 
         return Order::whereBetween('created_at', [$start, $end])
             ->orderBy('created_at', 'asc')
