@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import useDebounce from '@/hooks/useDebounce';
 import AppLayout from '@/layouts/app-layout';
-import { create, index } from '@/routes/products';
+import { index } from '@/routes/products';
 import { BreadcrumbItem, Category, Product } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { SelectValue } from '@radix-ui/react-select';
@@ -26,9 +26,13 @@ const breadcrumbs: BreadcrumbItem[] = [
         title: 'Produk',
         href: index().url,
     },
+    {
+        title: 'Restore',
+        href: '/admin/products/restore',
+    },
 ];
 
-type ProductIndexPageProps = {
+type ProductRestorePageProps = {
     products: {
         data: Product[];
         links: {
@@ -45,11 +49,11 @@ type ProductIndexPageProps = {
     };
 };
 
-function ProductIndexPage({
+function ProductRestorePage({
     products,
     categories,
     filters,
-}: ProductIndexPageProps) {
+}: ProductRestorePageProps) {
     const { flash } = usePage<{ flash: { success: string } }>().props;
     const initialSearch = filters.search || '';
     const initialCategory = filters.category || '';
@@ -79,7 +83,7 @@ function ProductIndexPage({
             prevCategory.current = String(debouncedCategory);
 
             router.get(
-                '/admin/products',
+                '/admin/products/restore',
                 {
                     search: debouncedSearch || undefined,
                     category: debouncedCategory || undefined,
@@ -94,18 +98,13 @@ function ProductIndexPage({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Produk" />
+            <Head title="Restore Produk" />
             <div className="space-y-4 p-4">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                    <h2 className="text-2xl font-semibold">Kelola Produk</h2>
-                    <div className="flex gap-2">
-                        <Link href={'/admin/products/restore'}>
-                            <Button variant="outline">Restore Produk</Button>
-                        </Link>
-                        <Link href={create()}>
-                            <Button>+ Tambah Produk</Button>
-                        </Link>
-                    </div>
+                    <h2 className="text-2xl font-semibold">Restore Produk</h2>
+                    <Link href={index().url}>
+                        <Button variant="outline">Kembali</Button>
+                    </Link>
                 </div>
 
                 {flash.success && (
@@ -118,7 +117,7 @@ function ProductIndexPage({
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>List Produk</CardTitle>
+                        <CardTitle>List Produk Terhapus</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex w-full flex-col gap-4 sm:flex-row">
@@ -169,4 +168,4 @@ function ProductIndexPage({
     );
 }
 
-export default ProductIndexPage;
+export default ProductRestorePage;

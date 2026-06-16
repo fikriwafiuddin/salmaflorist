@@ -65,10 +65,6 @@ class ProductService
     {
         $product = Product::findOrFail($id);
 
-        if (!empty($product->image)) {
-            $this->deleteImage($product->image);
-        }
-
         return $product->delete();
     }
 
@@ -103,6 +99,37 @@ class ProductService
                 ->with('category')
                 ->paginate($limit)
                 ->withQueryString();
+    }
+
+    public function getTrashed(object $request, int $limit = 10)
+    {
+        return Product::onlyTrashed()
+                ->when($request->search, function ($query, $search) {
+                    $query->where('name', 'like', "%{$search}%");
+                })
+                ->when($request->category !== 'all', function ($query) use ($request) {
+                    if (!empty($request->category)) {
+                        $query->where('category_id', (int) $request->category);
+                    }
+                })->when($request->filled('price_sort'), function ($query) use ($request) {
+                    $direction = strtolower($request->price_sort);
+
+                    if (in_array($direction, ['asc', 'desc'])) {
+                        $query->orderBy('price', $direction);
+                    }
+                })->unless($request->filled('price_sort'), function ($query) {
+                    $query->latest('deleted_at'); 
+                })
+                ->with('category')
+                ->paginate($limit)
+                ->withQueryString();
+    }
+
+    public function restore(int $id)
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+        
+        return $product->restore();
     }
 
     public function getSome(int $limit)

@@ -108,6 +108,25 @@ class ProductController extends Controller
         return to_route('products.index')->with('success', 'Produk berhasil dihapus');
     }
 
+    public function restoreIndex(Request $request)
+    {
+        $categories = $this->categoryService->getAll();
+        $products = $this->productService->getTrashed($request);
+
+        return Inertia::render("admin/products/restore/page", [
+            'products' => $products,
+            "categories" => $categories,
+            "filters" => $request->only(['search', 'category'])
+        ]);
+    }
+
+    public function restore(int $id)
+    {
+        $this->productService->restore($id);
+
+        return to_route('products.restore.index')->with('success', 'Produk berhasil direstore');
+    }
+
     public function exportExcel()
     {
         return Excel::download(new ProductsExport, 'products.xlsx');

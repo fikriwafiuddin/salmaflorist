@@ -37,6 +37,8 @@ Route::middleware(['auth', 'role:admin'])->prefix("/admin")->group(function () {
     
     Route::resource('categories', CategoryController::class);
 
+    Route::get('/products/restore', [ProductController::class, 'restoreIndex'])->name('products.restore.index');
+    Route::put('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
     Route::resource('products', ProductController::class);
     Route::get('/products/export/excel', [ProductController::class, 'exportExcel'])->name('products.export.excel');
 

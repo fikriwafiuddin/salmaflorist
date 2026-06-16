@@ -4,7 +4,6 @@ import { Category } from '@/types';
 import { Link } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { PencilIcon } from 'lucide-react';
-import DeleteCategory from '../DeleteCategory';
 
 const columns: ColumnDef<Category>[] = [
     {
@@ -26,7 +25,7 @@ const columns: ColumnDef<Category>[] = [
                             <PencilIcon />
                         </Button>
                     </Link>
-                    <DeleteCategory id={id} />
+                    {/* <DeleteCategory id={id} /> */}
                 </div>
             );
         },
